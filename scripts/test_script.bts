@@ -1,0 +1,318 @@
+import "std:memory"                     for gc as CollectGarbage;
+import "std:functional"                 for Closure as C, Closure = C2, Closure;
+
+// Any class with a method named 'call' can have it's instances be called like a function.
+// Current implementation does have quite a bit of overhead to it so for most performance just do:
+// 'instance:call(...)'
+
+class Hello
+{
+  // Class initializers must
+  // be a constant expression such as a String, Number, Boolean or Nil.
+  var h = "H Init";
+
+  // Static functions are actually a bit redundant as we support
+  // free functions but alas most OOP languages have this.
+  // This basically gets converted to:
+  //
+  //   func Hello_staticMethod()
+  //   {
+  //   }
+  //
+  // Although some OOP languages such as 'Java' choose not to have free functions at all.
+  static func staticMethod()
+  {
+    print "Static method call.";
+  }
+
+  // Self keyword must be used.
+  // method call syntax is self:method(...)
+  // Any function can be a constructor.
+  func ctor(arg0)
+  {
+    print "The constructor has been called";
+    print self;
+    print arg0;
+
+    self.who = arg0;
+  }
+
+  func differentCtor(stack_reader0)
+  {
+    print "This is a new constructor.";
+    print stack_reader0;
+  }
+
+  // Getter Subscript Operator
+  func [](arg0)
+  {
+    print "Index operator.";
+    print arg0;
+    return arg0 * 50;
+  }
+
+  // Assignment Subscript Operator
+  // The last arg is always the assigned value.
+  func []=(idx, value)
+  {
+    print "Assignment []";
+    print idx;
+    print value;
+  }
+
+  func dtor()
+  {
+    print "I have been destructed. (" + self.who + ")";
+  }
+};
+
+func class_create()
+{
+  var inst = new Hello(420);
+  var test0 = new Hello.differentCtor("Hello good sir");
+
+  // inst.new_field = new Hello(11);
+  // print inst.new_field.h;
+
+  inst.h = "New Value";
+  print inst.h;
+
+  print 0;
+  test0[3];
+
+  test0[2] = test0[4];
+
+  Hello.staticMethod();
+}
+
+func fibbonacci(n)
+{
+  if (n < 2)
+  {
+    return n;
+  }
+
+  return fibbonacci(n - 1) + fibbonacci(n - 2);
+}
+
+func another_sym(sub)
+{
+  return 77 - sub;
+}
+
+func test()
+{
+  for (var j = 0; j < 4; j = j + 1)
+  {
+    print "J = ";
+
+    for (var i = 0; i < 10; i = i + 1)
+    {
+      if (i == 5)
+      {
+        print "We hit 5";
+        break;
+      }
+
+      print i * j;
+    }
+  }
+
+  var i = another_sym(7);
+
+  print "i = " + i;
+
+  print fibbonacci(2);
+  print fibbonacci(9);
+}
+
+func testNative()
+{
+  var mathobj = new Math;
+
+  print Math.mult(4, 9) == mathobj.mult(4, 3);
+  print Math.mult(4, 3);
+  print mathobj.mult(4, 3);
+  print facAndMult(9, 3);
+}
+
+class_create();
+math_print();
+test();
+
+func alwaysTrue()
+{
+  print "alwaysTrue Dont call this function";
+  return true
+}
+
+func alwaysFalse()
+{
+  print "alwaysFalse Dont call this function";
+  return false
+}
+
+print "--------------------- BOOLEAN TESTS ---------------------";
+print (alwaysTrue() && false);
+print false;
+print true;
+print alwaysFalse() && alwaysTrue();
+print alwaysTrue()  || alwaysFalse();
+print true          || alwaysFalse();
+print false         && alwaysFalse();
+
+if (alwaysTrue() && true && false)
+{
+  print "This should NOT run.";
+}
+else
+{
+  print "This should be run";
+}
+
+if (true || alwaysFalse())
+{
+  print "This should be run.";
+}
+else
+{
+  print "This should NOT run";
+}
+print "--------------------- BOOLEAN TESTS ---------------------";
+
+//if (true || alwaysFalse())
+//{
+  // print 4 + Hello;
+//}
+
+print "Hello" + " World " + (5.32 + 23) + " " + testNative + " " + Hello;
+//hello();
+
+print "SIT 01";
+var h0 = new Hello(0);
+var h1 = new Hello(1);
+print "SIT 02";
+h0 = nil;
+h1 = nil;
+var h2 = new Hello(2);
+h2     = nil;
+var h3 = new Hello(3);
+print "SIT 03";
+
+func Hello_dtor(self)
+{
+  print "Will this work? (" + self + ")";
+}
+
+test_while();
+test_first_class_fn();
+test_functional();
+test_array();
+
+func test_while()
+{
+  print "\n test_while()";
+
+  var i = 0;
+
+  while (i < 4)
+  {
+    print "Is is now: " + i + "!";
+    i = i + 1;
+  }
+}
+
+func test_first_class_fn()
+{
+  print "\n< test_first_class_fn() >";
+
+  // Local function.
+  func test_first_class_fn_helper(callback)
+  {
+    print callback;
+    callback("Hello");
+  };
+
+  // Local Function Alt Syntax:
+  /*
+  var test_first_class_fn_helper = func()
+  {
+
+  };
+  */
+
+  test_first_class_fn_helper(
+    // anon function.
+    func(str)
+    {
+      print "I have been called with : " + str;
+    }
+  );
+}
+
+func test_functional()
+{
+  print "\n< test_functional() >";
+
+  print C + " == " + C2 + " == " + Closure;
+
+  func inner_fn(i)
+  {
+    var g = new C(func(self, arg0, arg1, arg2)
+    {
+      print "Self.a = " + self.a;
+      print "Arg0   = " + arg0;
+      print "Arg1   = " + arg1;
+      print "Arg2   = " + arg2;
+
+      return "Closure Return Value";
+    });
+
+    // Captured Variable.
+    g.a = i;
+    return g;
+  }
+
+  var my_g = inner_fn("This is a closed value");
+  print my_g("Hello", "My", "Good Sir");
+}
+
+var num_closures = 0;
+
+for (var a = 0; a < 200; a = a + 1)
+{
+  var x = a * 5 / 10;
+
+  if (x > 40)
+  {
+    var b = new C(func(self, arg0, arg1, arg2) {
+        print "Self.a = " + self.a;
+        print "Arg0   = " + arg0;
+        print "Arg1   = " + arg1;
+        print "Arg2   = " + arg2;
+
+        return "Closure Return Value";
+    });
+
+    num_closures = num_closures + 1;
+  }
+
+  print a;
+}
+
+print "Created " + num_closures + " closures.";
+
+func test_array()
+{
+  // Variadic Constructor.
+  // var a = new Array(0, 1, 2, 3, 4, 5, 6, 7, 8);
+  // a:sort();
+
+  // var m = new Map(
+  //   "key", value,
+  //   "key", value,
+  //   "key", value
+  // );
+}
+
+hello();

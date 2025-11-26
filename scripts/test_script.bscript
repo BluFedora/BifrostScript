@@ -1,0 +1,109 @@
+////////////////////////////////////////////////////////////////////////////////
+//                                                                            //
+//                         Language Examples                                  //
+//                                                                            //
+////////////////////////////////////////////////////////////////////////////////
+
+// import "std:io" for print as log_;
+import "std:io";
+
+// TODO(SR): Parser Bug this parses but the import always happens.
+// if (false)
+// {
+//   import "std:io";
+// }
+
+func log_(msg)
+{
+  print(msg);
+}
+
+func log(msg)
+{
+  log_(msg);
+}
+
+log("This is a small sample of the language!\n");
+
+class MyClass
+{
+  var test_field = "This is a String Literal";
+
+  func ctor()
+  {
+    log("Calling the constructor of 'MyClass'");
+  }
+
+  func myMethod(a)
+  {
+    log(
+      a + " was passed into my method."
+    );
+  }
+};
+
+log(MyClass)
+
+class Derived : MyClass
+{
+  func ctor()
+  {
+    log("Before");
+    super.ctor(self);
+    log("After");
+  }
+
+  func another()
+  {
+    log("Before(another)");
+    super.ctor(self);
+    log("After(another)");
+  }
+};
+
+log("---------- Method Call Test(s) ----------");
+
+
+log(Derived)
+var class_m = MyClass.myMethod;
+
+for (var i = 0; i < 5; i = i + 1)
+{
+  log("Creating Object " + i + ": ");
+
+  var obj = new Derived.another();
+
+  class_m(obj, i);
+
+  obj:myMethod(i * 2);
+}
+
+var str = "WTF";
+var s = "WTF";
+
+if (s != str)
+{
+  log("The string are NOT equal");
+}
+else
+{
+  log("The string are equal");
+}
+
+log("---------- Recursion Test(s) ----------");
+
+func fibbonacci(n)
+{
+  if (n < 2)
+  {
+    return n;
+  }
+
+  return fibbonacci(n - 1) + fibbonacci(n - 2);
+}
+
+for (var i = 0; i < 10; i = i + 1)
+{
+  var s = "Fibbonacci of " + i + " is " + fibbonacci(i);
+  log(s);
+}
