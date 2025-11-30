@@ -155,7 +155,7 @@ static BifrostVMError bfVM__moduleMake(BifrostVM* self, const char* module, Bifr
   {
     // TODO(SR):  Make it so this check only happens in debug builds??
 
-    *out = bfVM_findModule(self, module, string_range_length(name_range));
+    *out = bfVM_findModule(self, module, name_range.str_len);
 
     if (*out)
     {
@@ -545,7 +545,7 @@ void bfVM_stackLoadVariable(BifrostVM* self, size_t dst_idx, size_t inst_or_clas
   else if (obj->type == BIFROST_VM_OBJ_MODULE)
   {
     BifrostObjModule* const module = (BifrostObjModule*)obj;
-    self->stack_top[dst_idx]       = bfVM_stackFindVariable(module, var_name.str_bgn, string_range_length(var_name));
+    self->stack_top[dst_idx]       = bfVM_stackFindVariable(module, var_name.str_bgn, var_name.str_len);
   }
   else
   {
@@ -1690,7 +1690,7 @@ uint32_t bfVM_getSymbol(BifrostVM* self, string_range name)
   }
 
   BifrostString* sym = bfVMArray_emplace(self, &self->symbols);
-  *sym               = bfVMString_newLen(self, name.str_bgn, string_range_length(name));
+  *sym               = bfVMString_newLen(self, name.str_bgn, name.str_len);
 
   return num_symbols;
 }

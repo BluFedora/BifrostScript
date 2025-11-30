@@ -261,7 +261,7 @@ void bfDbg_PrintToken(const bfToken* token)
   }
   else
   {
-    printf("[%.*s]", (int)string_range_length(token->str_range), token->str_range.str_bgn);
+    printf("[%.*s]", (int)token->str_range.str_len, token->str_range.str_bgn);
   }
 
   printf("\n");

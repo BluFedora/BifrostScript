@@ -642,7 +642,7 @@ static string_range parserBeginFunction(BifrostParser* const self, const bool re
     Parser_EmitError(self, "An identifier, \"[]\" or \"[]=\" is expected after 'func' keyword.");
   }
 
-  bfParser_pushBuilder(self, name_str.str_bgn, string_range_length(name_str));
+  bfParser_pushBuilder(self, name_str.str_bgn, name_str.str_len);
   return name_str;
 }
 
@@ -665,7 +665,7 @@ static int parserParseFunction(BifrostParser* const self)
   while (!bfParser_is(self, BIFROST_TOKEN_R_PAREN))
   {
     const string_range param_str = self->current_token.str_range;
-    bfFuncBuilder_declVariable(self->fn_builder, param_str.str_bgn, string_range_length(param_str));
+    bfFuncBuilder_declVariable(self->fn_builder, param_str.str_bgn, param_str.str_len);
 
     bfParser_eat(self, BIFROST_TOKEN_IDENTIFIER, false, "Parameter names must be a word and not a keyword.");
     bfParser_eat(self, BIFROST_TOKEN_COMMA, true, "The last comma isn't needed but this allows a func (a b c) syntax.");
@@ -729,11 +729,11 @@ static void parseImport(BifrostParser* const self)
   const string_range name_str   = name_token.str_range;
   bfParser_eat(self, BIFROST_TOKEN_CONST_STR, false, "Import statments must be followed by a constant string.");
 
-  BifrostObjModule* const imported_module = bfVM_importModule(self->vm, self->current_module->name, name_str.str_bgn, string_range_length(name_str));
+  BifrostObjModule* const imported_module = bfVM_importModule(self->vm, self->current_module->name, name_str.str_bgn, name_str.str_len);
 
   if (imported_module == NULL)
   {
-    Parser_EmitError(self, "Failed to import module: '%.*s'", string_range_length(name_str), name_str.str_bgn);
+    Parser_EmitError(self, "Failed to import module: '%.*s'", name_str.str_len, name_str.str_bgn);
   }
 
   if (bfParser_match(self, BIFROST_TOKEN_CTRL_FOR))
@@ -754,7 +754,7 @@ static void parseImport(BifrostParser* const self)
 
       if (imported_module)
       {
-        bfVM_xSetVariable(&self->current_module->variables, self->vm, dst_name, bfVM_stackFindVariable(imported_module, src_name.str_bgn, string_range_length(src_name)));
+        bfVM_xSetVariable(&self->current_module->variables, self->vm, dst_name, bfVM_stackFindVariable(imported_module, src_name.str_bgn, src_name.str_len));
       }
     } while (bfParser_match(self, BIFROST_TOKEN_COMMA));
   }
@@ -1295,7 +1295,7 @@ static void parseClassDecl(BifrostParser* const self)
 
     if (bfParser_eat(self, BIFROST_TOKEN_IDENTIFIER, false, "Class name expected after ':' to specify the base class."))
     {
-      const bfVMValue base_class_val = bfVM_stackFindVariable(self->current_module, base_name_str.str_bgn, string_range_length(base_name_str));
+      const bfVMValue base_class_val = bfVM_stackFindVariable(self->current_module, base_name_str.str_bgn, base_name_str.str_len);
 
       if (bfVMValue_isPointer(base_class_val))
       {
@@ -1309,9 +1309,9 @@ static void parseClassDecl(BifrostParser* const self)
         {
           Parser_EmitError(self,
                            "'%.*s' cannot be used as a base class for '%.*s' (non class type).",
-                           string_range_length(base_name_str),
+                           base_name_str.str_len,
                            base_name_str.str_bgn,
-                           string_range_length(name_str),
+                           name_str.str_len,
                            name_str.str_bgn);
         }
       }
@@ -1319,9 +1319,9 @@ static void parseClassDecl(BifrostParser* const self)
       {
         Parser_EmitError(self,
                          "'%.*s' cannot be used as a base class for '%.*s' (non class type).",
-                         string_range_length(name_str),
+                         name_str.str_len,
                          name_str.str_bgn,
-                         string_range_length(base_name_str),
+                         base_name_str.str_len,
                          base_name_str.str_bgn);
       }
     }

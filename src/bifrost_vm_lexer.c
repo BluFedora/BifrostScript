@@ -193,7 +193,7 @@ static bfToken bfLexer_parseID(BifrostLexer* self)
   for (size_t i = 0; i < num_keywords; ++i)
   {
     const bfToken* keyword        = s_Keywords + i;
-    const size_t   keyword_length = string_range_length(keyword->str_range);
+    const size_t   keyword_length = keyword->str_range.str_len;
 
     if (keyword_length == length && LibC_strncmp(keyword->str_range.str_bgn, bgn, length) == 0)
     {
@@ -421,7 +421,7 @@ bfToken bfLexer_nextToken(BifrostLexer* self)
                           "Invalid character ('%c') on line %u \"%.*s\"",
                           current_char,
                           (unsigned int)self->current_line_no,
-                          (int)string_range_length(line),
+                          (int)line.str_len,
                           line.str_bgn);
 
         bfLexer_advance(self, 1);

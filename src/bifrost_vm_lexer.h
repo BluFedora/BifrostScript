@@ -28,12 +28,6 @@ typedef struct string_range
 
 } string_range;
 
-// This is in this file because of the "size_t".
-static size_t string_range_length(const string_range self)
-{
-  return self.str_len;
-}
-
 inline string_range MakeStringLen(const char* const str, const size_t length)
 {
   string_range result;
