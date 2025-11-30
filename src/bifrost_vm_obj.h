@@ -181,7 +181,6 @@ void*  bfVMArray_emplaceN(struct BifrostVM* vm, void* const self, const size_t n
 void*  bfVMArray_pop(void* const self);
 void*  bfVMArray_back(const void* const self);
 void   bfVMArray_clear(void* const self);
-size_t bfVMArray_find(const void* const self, const void* key, bfVMArrayFindCompare compare);
 void   bfVMArray_push(struct BifrostVM* vm, void* const self, const void* const data);
 void   bfVMArray_delete(struct BifrostVM* vm, void* const self);
 

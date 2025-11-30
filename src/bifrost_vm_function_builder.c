@@ -44,17 +44,21 @@ void bfFuncBuilder_begin(BifrostVMFunctionBuilder* self, const char* name, size_
   bfFuncBuilder_pushScope(self);
 }
 
-uint32_t bfFuncBuilder_addConstant(BifrostVMFunctionBuilder* self, bfVMValue value)
+uint32_t bfFuncBuilder_addConstant(BifrostVMFunctionBuilder* self, const bfVMValue value)
 {
-  size_t index = bfVMArray_find(&self->constants, &value, NULL);
+  const size_t num_constants = bfVMArray_size(&self->constants);
 
-  if (index == BIFROST_ARRAY_INVALID_INDEX)
+  for (uint32_t index = 0; index < num_constants; ++index)
   {
-    index = bfVMArray_size(&self->constants);
-    bfVMArray_push(self->vm, &self->constants, &value);
+    if (self->constants[index] == value)
+    {
+      return index;
+    }
   }
 
-  return (uint32_t)index;
+  bfVMArray_push(self->vm, &self->constants, &value);
+
+  return (uint32_t)num_constants;
 }
 
 void bfFuncBuilder_pushScope(BifrostVMFunctionBuilder* self)

@@ -1675,28 +1675,24 @@ BifrostObjModule* bfVM_findModule(BifrostVM* self, const char* name, size_t name
   return NULL;
 }
 
-static int bfVM_getSymbolHelper(const void* lhs, const void* rhs)
-{
-  const string_range* const  name    = lhs;
-  const BifrostString* const sym     = (void*)rhs;
-  const size_t               lhs_len = string_range_length(*name);
-  const size_t               rhs_len = bfVMString_length(*sym);
-
-  return lhs_len == rhs_len && bfVMString_ccmpn(*sym, name->str_bgn, lhs_len) == 0;
-}
-
 uint32_t bfVM_getSymbol(BifrostVM* self, string_range name)
 {
-  size_t idx = bfVMArray_find(&self->symbols, &name, &bfVM_getSymbolHelper);
+  const uint32_t num_symbols = (uint32_t)bfVMArray_size(&self->symbols);
 
-  if (idx == BIFROST_ARRAY_INVALID_INDEX)
+  for (uint32_t symbol_index = 0; symbol_index < num_symbols; ++symbol_index)
   {
-    idx                = bfVMArray_size(&self->symbols);
-    BifrostString* sym = bfVMArray_emplace(self, &self->symbols);
-    *sym               = bfVMString_newLen(self, name.str_bgn, string_range_length(name));
+    const BifrostString* const symbol = self->symbols + symbol_index;
+
+    if (bfVMString_length(*symbol) == name.str_len && bfVMString_ccmpn(*symbol, name.str_bgn, name.str_len) == 0)
+    {
+      return symbol_index;
+    }
   }
 
-  return (uint32_t)idx;
+  BifrostString* sym = bfVMArray_emplace(self, &self->symbols);
+  *sym               = bfVMString_newLen(self, name.str_bgn, string_range_length(name));
+
+  return num_symbols;
 }
 
 static BifrostVMError bfVM_runModule(BifrostVM* self, BifrostObjModule* module)

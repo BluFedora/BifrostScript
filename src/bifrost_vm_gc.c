@@ -430,7 +430,6 @@ static void bfGCMarkObj(BifrostObj* obj, uint8_t mark_value)
         {
           bfGCMarkObj(&ref->clz->super, mark_value);
         }
-
         break;
       }
       case BIFROST_VM_OBJ_WEAK_REF:
@@ -441,7 +440,6 @@ static void bfGCMarkObj(BifrostObj* obj, uint8_t mark_value)
         {
           bfGCMarkObj(&weak_ref->clz->super, mark_value);
         }
-
         break;
       }
       InvalidDefaultCase;

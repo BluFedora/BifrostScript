@@ -431,43 +431,6 @@ void* bfVMArray_emplaceN(struct BifrostVM* vm, void* const self, const size_t nu
   return new_element;
 }
 
-static int Array_findDefaultCompare(const void* lhs, const void* rhs)
-{
-  ArrayDefaultCompareData* data = (ArrayDefaultCompareData*)lhs;
-  return LibC_memcmp(data->key, rhs, data->stride) == 0;
-}
-
-size_t bfVMArray_find(const void* const self, const void* key, bfVMArrayFindCompare compare)
-{
-  const size_t len = bfVMArray_size(self);
-
-  if (compare)
-  {
-    for (size_t i = 0; i < len; ++i)
-    {
-      if (compare(key, bfVMArray_at(self, i)))
-      {
-        return i;
-      }
-    }
-  }
-  else
-  {
-    const size_t            stride = Array_getHeader(*SELF_CAST(self))->stride;
-    ArrayDefaultCompareData data   = {stride, key};
-
-    for (size_t i = 0; i < len; ++i)
-    {
-      if (Array_findDefaultCompare(&data, bfVMArray_at(self, i)))
-      {
-        return i;
-      }
-    }
-  }
-
-  return BIFROST_ARRAY_INVALID_INDEX;
-}
-
 void* bfVMArray_at(const void* const self, const size_t index)
 {
   return *(char**)self + (Array_getHeader(*SELF_CAST(self))->stride * index);
