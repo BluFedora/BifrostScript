@@ -611,7 +611,7 @@ static void parseBlock(BifrostParser* const self)
 
 static string_range parserBeginFunction(BifrostParser* const self, const bool require_name)
 {
-  string_range name_str = MakeString("__INVALID__");
+  string_range name_str = MakeString("__ERROR__");
 
   if (bfParser_is(self, BIFROST_TOKEN_IDENTIFIER))
   {
@@ -1255,20 +1255,21 @@ static void parseClassVarDecl(BifrostParser* const self, BifrostObjClass* clz, c
   bfParser_eat(self, BIFROST_TOKEN_SEMI_COLON, false, "Expected semi-colon after variable declaration.");
 }
 
-static void parseClassFunc(BifrostParser* const self, BifrostObjClass* clz, bool is_static)
+static void parseClassFunc(BifrostParser* const self, BifrostObjClass* const clz, bool is_static)
 {
   const string_range name_str = parserBeginFunction(self, true);
-  int                arity    = !is_static;
+  int                arity    = 0;
 
   if (!is_static)
   {
     bfFuncBuilder_declVariable(self->fn_builder, "self", 4);
+    ++arity;
   }
 
   arity += parserParseFunction(self);
 
   // TODO(Shareef): This same line is used in 3 (or more) places and should be put in a helper.
-  BifrostObjFn* fn = bfObj_NewFunction(self->vm, self->current_module);
+  BifrostObjFn* const fn = bfObj_NewFunction(self->vm, self->current_module);
   bfVM_xSetVariable(&clz->symbols, self->vm, name_str, bfVMValue_fromPointer(fn));
   bfParser_popBuilder(self, fn, arity);
 }
@@ -1363,7 +1364,7 @@ static void parseClassDecl(BifrostParser* const self)
       else
       {
         Parser_EmitError(self, "Invalid declaration in class. Currently only 'var' and 'func' are supported.");
-        Parser_parseStatement(self);
+        Parser_parseStatement(self); // TODO(SR): This is not right, but there is nothing that can correctly happen here.
       }
     }
   }

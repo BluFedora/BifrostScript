@@ -30,10 +30,17 @@ extern "C" {
 typedef struct BifrostVM  BifrostVM;
 typedef struct BifrostObj BifrostObj;
 
+typedef struct BifrostGCRoot
+{
+  struct BifrostGCRoot* parent;
+  BifrostObj*           value;
+
+} BifrostGCRoot;
+
 void  bfGC_Collect(BifrostVM* self);
 void* bfGC_DefaultAllocator(void* user_data, void* ptr, size_t old_size, size_t new_size);
 void* bfGC_AllocMemory(BifrostVM* self, void* ptr, size_t old_size, size_t new_size);
-void  bfGC_PushRoot(BifrostVM* self, struct BifrostObj* obj);
+void  bfGC_PushRoot(BifrostVM* self, BifrostGCRoot* const root_node, struct BifrostObj* obj);
 void  bfGC_PopRoot(BifrostVM* self);
 
 #if __cplusplus

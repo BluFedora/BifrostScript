@@ -110,7 +110,7 @@ void bfVM_ctor(BifrostVM* self, const BifrostVMParams* params)
   self->handles           = NULL;
   self->free_handles      = NULL;
   self->parser_stack      = NULL;
-  self->temp_roots_top    = 0;
+  self->gc_roots          = NULL;
   self->finalized         = NULL;
   self->current_native_fn = NULL;
 
@@ -167,7 +167,8 @@ static BifrostVMError bfVM__moduleMake(BifrostVM* self, const char* module, Bifr
 
   if (!is_anon)
   {
-    bfGC_PushRoot(self, &(*out)->super);
+    BifrostGCRoot module_gc_root;
+    bfGC_PushRoot(self, &module_gc_root, &(*out)->super);
     BifrostObjStr* const module_name = bfObj_NewString(self, name_range);
     bfHashMap_set(&self->modules, module_name, out);
     bfGC_PopRoot(self);
@@ -188,14 +189,13 @@ BifrostVMError bfVM_moduleMake(BifrostVM* self, size_t idx, const char* module)
   return err;
 }
 
-static void bfVM_moduleLoadStdIOPrint(BifrostVM* vm, int32_t num_args)
+static void bfVM_moduleLoadStdIOPrint(BifrostVM* vm, const int32_t num_args)
 {
   const bfPrintFn print = vm->params.print_fn;
 
   if (print && num_args)
   {
-    // TODO: Make this safer and better
-    char buffer[1024];
+    char buffer[1024];  // TODO(SR): Make this better
 
     char* buffer_head = buffer;
     char* buffer_end  = buffer + sizeof(buffer);
@@ -405,7 +405,8 @@ static BifrostObjClass* createClassBinding(BifrostVM* self, bfVMValue obj, const
 
   clz->finalizer = clz_bind->finalizer;
 
-  bfGC_PushRoot(self, &clz->super);
+  BifrostGCRoot class_gc_root;
+  bfGC_PushRoot(self, &class_gc_root, &clz->super);
   if (bfVM__stackStoreVariable(self, obj, name, bfVMValue_fromPointer(clz)))
   {
     bfGC_PopRoot(self);
@@ -417,7 +418,8 @@ static BifrostObjClass* createClassBinding(BifrostVM* self, bfVMValue obj, const
   {
     BifrostObjNativeFn* const fn = bfObj_NewNativeFn(self, method->fn, method->arity, method->num_statics, method->extra_data);
 
-    bfGC_PushRoot(self, &fn->super);
+    BifrostGCRoot fn_gc_root;
+    bfGC_PushRoot(self, &fn_gc_root, &fn->super);
     bfVM_xSetVariable(&clz->symbols, self, MakeString(method->name), bfVMValue_fromPointer(fn));
     bfGC_PopRoot(self);
 
@@ -1568,7 +1570,8 @@ BifrostVMError bfVM_execInModule(BifrostVM* self, const char* module, const char
 
   if (!err)
   {
-    bfGC_PushRoot(self, &module_obj->super);
+    BifrostGCRoot module_gc_root;
+    bfGC_PushRoot(self, &module_gc_root, &module_obj->super);
 
     // Short Circuit. The || operator turns ints into bools (0 or 1) so can't assign directly.
     ((err = bfVM_compileIntoModule(self, module_obj, source, source_length))) || ((err = bfVM_runModule(self, module_obj)));
@@ -1734,7 +1737,8 @@ BifrostObjModule* bfVM_importModule(BifrostVM* self, const char* from, const cha
       const string_range name_range  = {.str_bgn = name, .str_len = name_len};
       BifrostObjStr*     module_name = bfObj_NewString(self, name_range);
 
-      bfGC_PushRoot(self, &module_name->super);
+      BifrostGCRoot module_name_gc_root;
+      bfGC_PushRoot(self, &module_name_gc_root, &module_name->super);
 
       BifrostVMModuleLookUp look_up =
        {
@@ -1748,7 +1752,8 @@ BifrostObjModule* bfVM_importModule(BifrostVM* self, const char* from, const cha
       {
         m = bfObj_NewModule(self, name_range);
 
-        bfGC_PushRoot(self, &m->super);
+        BifrostGCRoot module_gc_root;
+        bfGC_PushRoot(self, &module_gc_root, &m->super);
 
         // NOTE(Shareef): No error is 0. So if an error occurs we short-circuit
         const bool has_error = bfVM_compileIntoModule(self, m, look_up.source, look_up.source_len) || bfVM_runModule(self, m);

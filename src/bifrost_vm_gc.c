@@ -120,9 +120,9 @@ static void bfGCMarkObjects(struct BifrostVM* self)
     parsers = parsers->parent;
   }
 
-  for (uint8_t i = 0; i < self->temp_roots_top; ++i)
+  for (const BifrostGCRoot* gc_root = self->gc_roots; gc_root != NULL; gc_root = gc_root->parent)
   {
-    bfGCMarkObj(self->temp_roots[i], GC_MARK_REACHABLE);
+    bfGCMarkObj(gc_root->value, GC_MARK_REACHABLE);
   }
 }
 
@@ -303,15 +303,17 @@ void* bfGC_AllocMemory(struct BifrostVM* self, void* ptr, size_t old_size, size_
   return (self->params.memory_fn)(self->params.user_data, ptr, old_size, new_size);
 }
 
-void bfGC_PushRoot(struct BifrostVM* self, struct BifrostObj* obj)
+void bfGC_PushRoot(struct BifrostVM* self, BifrostGCRoot* const root_node, struct BifrostObj* obj)
 {
-  LibC_assert(self->temp_roots_top < bfCArraySize(self->temp_roots), "Too many GC Roots.");
-  self->temp_roots[self->temp_roots_top++] = obj;
+  root_node->value  = obj;
+  root_node->parent = self->gc_roots;
+  self->gc_roots    = root_node;
 }
 
 void bfGC_PopRoot(struct BifrostVM* self)
 {
-  --self->temp_roots_top;
+  LibC_assert(self->gc_roots != NULL, "Too many GC Roots Pops.");
+  self->gc_roots = self->gc_roots->parent;
 }
 
 static size_t bfGCFinalizePostMark(BifrostVM* self)

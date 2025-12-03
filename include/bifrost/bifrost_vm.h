@@ -57,6 +57,7 @@ typedef struct BifrostObjModule    BifrostObjModule;
 typedef struct BifrostObjNativeFn  BifrostObjNativeFn;
 typedef struct BifrostVM           BifrostVM;
 typedef struct bfValueHandleImpl*  bfValueHandle; /*!< An opaque handle to a VM Value to keep it alive from the GC. */
+typedef struct BifrostGCRoot       BifrostGCRoot;
 
 typedef uint64_t bfVMValue; /*!< The Nan-Tagged value representation of this scripting language. */
 
@@ -279,14 +280,10 @@ typedef struct BifrostHashMap
 
 /*!
  * @brief
- *   The self contained virtual machine for the Bifrost
- *   scripting language.
+ *   The self contained virtual machine for the Bifrost scripting language.
  *
- *   Consider all these member variables private. They
- *   are exposed so that you may declare a VM on the stack.
- *
- *   If you want ABI compatibility use 'bfVM_new' and 'bfVM_delete'
- *   and do not use this struct directly.
+ *   Consider all these member variables private. 
+ *   They are exposed so that you may declare a VM without dynamic allocation.
  */
 struct BifrostVM
 {
@@ -303,8 +300,7 @@ struct BifrostVM
   BifrostString        last_error;                              /*!< The last error to happen in a user readable way                                */
   size_t               bytes_allocated;                         /*!< The total amount of memory this VM has asked for                               */
   BifrostObj*          finalized;                               /*!< Objects that have finalized but still need to be freed                         */
-  BifrostObj*          temp_roots[8];                           /*!< Objects temporarily protected from the GC                                      */
-  uint8_t              temp_roots_top;                          /*!< BifrostVM::temp_roots size                                                     */
+  BifrostGCRoot*       gc_roots;                                /*!< Objects temporarily protected from the GC                                      */
   bool                 gc_is_running;                           /*!< This is so that when calling a finalizer the GC isn't run.                     */
   uint32_t             build_in_symbols[BIFROST_VM_SYMBOL_MAX]; /*!< Symbols that should be loaded at startup for a faster runtime.                 */
   BifrostObjNativeFn*  current_native_fn;                       /*!< The currently executing native function for accessing of userdata and statics. */
