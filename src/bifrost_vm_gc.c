@@ -24,7 +24,7 @@
 #include "bifrost_vm_function_builder.h"  // BifrostVMFunctionBuilder
 #include "bifrost_vm_obj.h"               // BifrostObj
 #include "bifrost_vm_parser.h"            // BifrostParser
-#include "bifrost_vm_value.h"             // bfVMValue
+#include "bifrost_vm_value.h"             // BifrostValue
 
 /* TODO(SR):
   @Optimization:
@@ -41,14 +41,14 @@
 #define GC_MARK_FINALIZE    3
 
 static size_t bfGCFinalizePostMark(BifrostVM* self);
-static void   bfGCMarkValue(bfVMValue value, uint8_t mark_value);
-static void   bfGCMarkValues(bfVMValue* values, uint8_t mark_value);
-static void   bfGCMarkValuesN(bfVMValue* values, size_t size, uint8_t mark_value);
+static void   bfGCMarkValue(BifrostValue value, uint8_t mark_value);
+static void   bfGCMarkValues(BifrostValue* values, uint8_t mark_value);
+static void   bfGCMarkValuesN(BifrostValue* values, size_t size, uint8_t mark_value);
 static void   bfGCMarkObj(BifrostObj* obj, uint8_t mark_value);
 static void   bfGCMarkSymbols(BifrostVMSymbol* symbols, uint8_t mark_value);
 static void   bfGCFinalize(BifrostVM* self);
 
-extern bfVMValue     bfVM_getHandleValue(bfValueHandle h);
+extern BifrostValue     bfVM_getHandleValue(bfValueHandle h);
 extern bfValueHandle bfVM_getHandleNext(bfValueHandle h);
 extern uint32_t      bfVM_getSymbol(BifrostVM* self, string_range name);
 
@@ -174,7 +174,7 @@ static size_t bfGCSweep(struct BifrostVM* self)
 
       if (clz && dtor_symbol < bfVMArray_size(&clz->symbols))
       {
-        const bfVMValue value = clz->symbols[dtor_symbol].value;
+        const BifrostValue value = clz->symbols[dtor_symbol].value;
 
         if (bfVMValue_isPointer(value) && bfObj_IsFunction(bfVMValue_asPointer(value)))
         {
@@ -340,7 +340,7 @@ static size_t bfGCFinalizePostMark(BifrostVM* self)
   return collected_bytes;
 }
 
-static void bfGCMarkValue(bfVMValue value, uint8_t mark_value)
+static void bfGCMarkValue(BifrostValue value, uint8_t mark_value)
 {
   if (bfVMValue_isPointer(value))
   {
@@ -353,12 +353,12 @@ static void bfGCMarkValue(bfVMValue value, uint8_t mark_value)
   }
 }
 
-static void bfGCMarkValues(bfVMValue* values, uint8_t mark_value)
+static void bfGCMarkValues(BifrostValue* values, uint8_t mark_value)
 {
   bfGCMarkValuesN(values, bfVMArray_size(&values), mark_value);
 }
 
-static void bfGCMarkValuesN(bfVMValue* values, size_t size, uint8_t mark_value)
+static void bfGCMarkValuesN(BifrostValue* values, size_t size, uint8_t mark_value)
 {
   for (size_t i = 0; i < size; ++i)
   {
@@ -406,7 +406,7 @@ static void bfGCMarkObj(BifrostObj* obj, uint8_t mark_value)
         bfGCMarkObj(&inst->clz->super, mark_value);
         bfHashMapFor(it, &inst->fields)
         {
-          bfGCMarkValue(*(bfVMValue*)it.value, mark_value);
+          bfGCMarkValue(*(BifrostValue*)it.value, mark_value);
         }
         break;
       }
@@ -467,14 +467,14 @@ static void bfGCFinalize(BifrostVM* self)
   while (cursor)
   {
     BifrostObjClass* const clz   = cursor->clz;
-    const bfVMValue        value = clz->symbols[dtor_symbol].value;
+    const BifrostValue        value = clz->symbols[dtor_symbol].value;
 
     // TODO(SR):
     //   Investigate if this breaks some reentrancy model rules.
     //   As it seems these registers are clobbered.
     //   Solution?: NO GC While in a native fn?
 
-    bfVMValue stack_restore[2];
+    BifrostValue stack_restore[2];
 
     bfVM_stackResize(self, 2);
     stack_restore[0]   = self->stack_top[0];

@@ -35,7 +35,7 @@ void bfFuncBuilder_begin(BifrostVMFunctionBuilder* self, const char* name, size_
 
   self->name         = name;
   self->name_len     = length;
-  self->constants    = bfVMArray_new(self->vm, bfVMValue, k_DefaultArraySize);
+  self->constants    = bfVMArray_new(self->vm, BifrostValue, k_DefaultArraySize);
   self->instructions = bfVMArray_new(self->vm, uint32_t, k_DefaultArraySize);
   self->code_to_line = bfVMArray_newA(self->vm, self->code_to_line, k_DefaultArraySize);
   bfVMArray_clear(&self->local_vars);
@@ -44,7 +44,7 @@ void bfFuncBuilder_begin(BifrostVMFunctionBuilder* self, const char* name, size_
   bfFuncBuilder_pushScope(self);
 }
 
-uint32_t bfFuncBuilder_addConstant(BifrostVMFunctionBuilder* self, const bfVMValue value)
+uint32_t bfFuncBuilder_addConstant(BifrostVMFunctionBuilder* self, const BifrostValue value)
 {
   const size_t num_constants = bfVMArray_size(&self->constants);
 

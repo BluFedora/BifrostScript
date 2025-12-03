@@ -15,7 +15,7 @@
 
 #include "bifrost_vm_gc.h"  // Allocation Functions
 
-static inline void SetupGCObject(BifrostObj* obj, BifrostVMObjType type, BifrostObj** next)
+inline static void SetupGCObject(BifrostObj* obj, BifrostObjType type, BifrostObj** next)
 {
   obj->type    = type;
   obj->gc_mark = 0;
@@ -28,7 +28,7 @@ static inline void SetupGCObject(BifrostObj* obj, BifrostVMObjType type, Bifrost
   }
 }
 
-static inline void* AllocateVMObjectImpl(struct BifrostVM* self, size_t size, const BifrostVMObjType type)
+inline static BifrostObj* AllocateVMObjectImpl(struct BifrostVM* self, size_t size, const BifrostObjType type)
 {
   BifrostObj* const obj = bfGC_AllocMemory(self, NULL, 0u, size);
 
@@ -75,7 +75,7 @@ BifrostObjInstance* bfObj_NewInstance(struct BifrostVM* self, BifrostObjClass* c
 
   BifrostHashMapParams hash_params;
   bfHashMapParams_init(&hash_params, self);
-  hash_params.value_size = sizeof(bfVMValue);
+  hash_params.value_size = sizeof(BifrostValue);
 
   bfHashMap_ctor(&inst->fields, &hash_params);
   inst->clz = clz;
@@ -105,12 +105,12 @@ BifrostObjFn* bfObj_NewFunction(struct BifrostVM* self, BifrostObjModule* module
 
 BifrostObjNativeFn* bfObj_NewNativeFn(struct BifrostVM* self, bfNativeFnT fn_ptr, int32_t arity, uint32_t num_statics, uint16_t extra_data)
 {
-  BifrostObjNativeFn* fn = AllocateVMObjectEx(BifrostObjNativeFn, self, BIFROST_VM_OBJ_NATIVE_FN, sizeof(bfVMValue) * num_statics + extra_data);
+  BifrostObjNativeFn* fn = AllocateVMObjectEx(BifrostObjNativeFn, self, BIFROST_VM_OBJ_NATIVE_FN, sizeof(BifrostValue) * num_statics + extra_data);
 
   fn->value           = fn_ptr;
   fn->arity           = arity;
   fn->num_statics     = num_statics;
-  fn->statics         = (bfVMValue*)((char*)fn + sizeof(BifrostObjNativeFn));
+  fn->statics         = (BifrostValue*)(fn + 1);
   fn->extra_data_size = extra_data;
 
   return fn;
@@ -170,7 +170,7 @@ size_t bfObj_AllocationSize(const BifrostObj* obj)
     }
     case BIFROST_VM_OBJ_NATIVE_FN:
     {
-      return sizeof(BifrostObjNativeFn) + ((const BifrostObjNativeFn*)obj)->num_statics * sizeof(bfVMValue) + ((BifrostObjNativeFn*)obj)->extra_data_size;
+      return sizeof(BifrostObjNativeFn) + ((const BifrostObjNativeFn*)obj)->num_statics * sizeof(BifrostValue) + ((BifrostObjNativeFn*)obj)->extra_data_size;
     }
     case BIFROST_VM_OBJ_STRING:
     {

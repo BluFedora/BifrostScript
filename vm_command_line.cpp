@@ -302,7 +302,7 @@ void bfRegisterModuleMemory(BifrostVM* vm);
     /*
     typedef struct
     {
-      bfVMValue* data;
+      BifrostValue* data;
 
     } StdArray;
 

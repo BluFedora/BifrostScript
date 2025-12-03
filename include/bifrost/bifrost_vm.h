@@ -59,7 +59,7 @@ typedef struct BifrostVM           BifrostVM;
 typedef struct bfValueHandleImpl*  bfValueHandle; /*!< An opaque handle to a VM Value to keep it alive from the GC. */
 typedef struct BifrostGCRoot       BifrostGCRoot;
 
-typedef uint64_t bfVMValue; /*!< The Nan-Tagged value representation of this scripting language. */
+typedef uint64_t BifrostValue; /*!< The Nan-Tagged value representation of this scripting language. */
 
 #define InvalidDefaultCase \
   default: break;
@@ -282,15 +282,15 @@ typedef struct BifrostHashMap
  * @brief
  *   The self contained virtual machine for the Bifrost scripting language.
  *
- *   Consider all these member variables private. 
+ *   Consider all these member variables private.
  *   They are exposed so that you may declare a VM without dynamic allocation.
  */
 struct BifrostVM
 {
   BifrostVMParams      params;                                  /*!< The user defined parameters used by the VM                                     */
   BifrostVMStackFrame* frames;                                  /*!< The call stack.                                                                */
-  bfVMValue*           stack;                                   /*!< The base pointer to the stack memory.                                          */
-  bfVMValue*           stack_top;                               /*!< The usable top of the [BifrostVM::stack].                                      */
+  BifrostValue*        stack;                                   /*!< The base pointer to the stack memory.                                          */
+  BifrostValue*        stack_top;                               /*!< The usable top of the [BifrostVM::stack].                                      */
   BifrostString*       symbols;                                 /*!< Every symbol ever used in the vm, a 'perfect hash'.                            */
   BifrostObj*          gc_object_list;                          /*!< The list of every object allocated by this VM.                                 */
   BifrostHashMap       modules;                                 /*!< <BifrostObjStr, BifrostObjModule*> for fast module lookup                      */

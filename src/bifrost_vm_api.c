@@ -29,12 +29,12 @@ static BifrostVMError bfVM_compileIntoModule(BifrostVM* self, BifrostObjModule* 
 
 struct bfValueHandleImpl
 {
-  bfVMValue     value;
+  BifrostValue     value;
   bfValueHandle prev;
   bfValueHandle next;
 };
 
-bfVMValue bfVM_getHandleValue(bfValueHandle h)
+BifrostValue bfVM_getHandleValue(bfValueHandle h)
 {
   return h->value;
 }
@@ -74,7 +74,7 @@ void bfVMParams_initDefault(BifrostVMParams* self)
   self->user_data          = NULL;                  /* User data for the memory allocator, and maybe other future things.     */
 }
 
-static inline void bfVM_assertStackIndex(const BifrostVM* const self, size_t idx)
+static inline void bfVM_assertStackIndex(const BifrostVM* const self, const size_t idx)
 {
   const size_t size = bfVMArray_size(&self->stack);
 
@@ -202,7 +202,7 @@ static void bfVM_moduleLoadStdIOPrint(BifrostVM* vm, const int32_t num_args)
 
     for (int32_t i = 0; i < num_args && buffer < buffer_end; ++i)
     {
-      const bfVMValue value         = vm->stack_top[i];
+      const BifrostValue value         = vm->stack_top[i];
       const size_t    written_bytes = bfDbg_ValueToString(value, buffer_head, buffer_end - buffer_head);
 
       buffer_head += written_bytes;
@@ -296,7 +296,7 @@ BifrostVMError bfVM_stackResize(BifrostVM* self, size_t size)
   return BIFROST_VM_ERROR_NONE;
 }
 
-bfVMValue bfVM_stackFindVariable(BifrostObjModule* module_obj, const char* variable, size_t variable_len)
+BifrostValue bfVM_stackFindVariable(BifrostObjModule* module_obj, const char* variable, size_t variable_len)
 {
   LibC_assert(module_obj, "bfVM_stackFindVariable: Module must not be null.");
 
@@ -320,14 +320,14 @@ bfVMValue bfVM_stackFindVariable(BifrostObjModule* module_obj, const char* varia
   return bfVMValue_fromNull();
 }
 
-static int bfVM__stackStoreVariable(BifrostVM* self, bfVMValue obj, string_range field_symbol, bfVMValue value);
+static int bfVM__stackStoreVariable(BifrostVM* self, BifrostValue obj, string_range field_symbol, BifrostValue value);
 
 BifrostVMError bfVM_stackMakeInstance(BifrostVM* self, size_t clz_idx, size_t dst_idx)
 {
   bfVM_assertStackIndex(self, clz_idx);
   bfVM_assertStackIndex(self, dst_idx);
 
-  bfVMValue clz_value = self->stack_top[clz_idx];
+  BifrostValue clz_value = self->stack_top[clz_idx];
 
   if (!bfVMValue_isPointer(clz_value))
   {
@@ -361,7 +361,7 @@ void* bfVM_stackMakeReference(BifrostVM* self, size_t idx, size_t extra_data_siz
   return bfVM_stackReadInstance(self, idx);
 }
 
-static BifrostObjModule* bfVM__findModule(bfVMValue obj)
+static BifrostObjModule* bfVM__findModule(BifrostValue obj)
 {
   if (!bfVMValue_isPointer(obj))
   {
@@ -388,9 +388,9 @@ static BifrostObjModule* bfVM__findModule(bfVMValue obj)
   return NULL;
 }
 
-uint32_t bfVM_xSetVariable(BifrostVMSymbol** variables, BifrostVM* vm, string_range name, bfVMValue value);
+uint32_t bfVM_xSetVariable(BifrostVMSymbol** variables, BifrostVM* vm, string_range name, BifrostValue value);
 
-static BifrostObjClass* createClassBinding(BifrostVM* self, bfVMValue obj, const BifrostVMClassBind* clz_bind)
+static BifrostObjClass* createClassBinding(BifrostVM* self, BifrostValue obj, const BifrostVMClassBind* clz_bind)
 {
   BifrostObjModule* module_obj = bfVM__findModule(obj);
 
@@ -450,7 +450,7 @@ void bfVM_stackMakeWeakRef(BifrostVM* self, size_t idx, void* value)
   self->stack_top[idx] = bfVMValue_fromPointer(bfObj_NewWeaKRef(self, value));
 }
 
-static bool bfVMGrabObjectsOfType(bfVMValue obj_a, bfVMValue obj_b, BifrostVMObjType type_a, BifrostVMObjType type_b, BifrostObj** out_a, BifrostObj** out_b)
+static bool bfVMGrabObjectsOfType(BifrostValue obj_a, BifrostValue obj_b, BifrostObjType type_a, BifrostObjType type_b, BifrostObj** out_a, BifrostObj** out_b)
 {
   if (bfVMValue_isPointer(obj_a) && bfVMValue_isPointer(obj_b))
   {
@@ -474,8 +474,8 @@ void bfVM_referenceSetClass(BifrostVM* self, size_t idx, size_t clz_idx)
   bfVM_assertStackIndex(self, idx);
   bfVM_assertStackIndex(self, clz_idx);
 
-  const bfVMValue obj     = self->stack_top[idx];
-  const bfVMValue clz     = self->stack_top[clz_idx];
+  const BifrostValue obj     = self->stack_top[idx];
+  const BifrostValue clz     = self->stack_top[clz_idx];
   BifrostObj*     obj_ptr = NULL;
   BifrostObj*     clz_ptr = NULL;
 
@@ -490,8 +490,8 @@ void bfVM_classSetBaseClass(BifrostVM* self, size_t idx, size_t clz_idx)
   bfVM_assertStackIndex(self, idx);
   bfVM_assertStackIndex(self, clz_idx);
 
-  const bfVMValue obj     = self->stack_top[idx];
-  const bfVMValue clz     = self->stack_top[clz_idx];
+  const BifrostValue obj     = self->stack_top[idx];
+  const BifrostValue clz     = self->stack_top[clz_idx];
   BifrostObj*     obj_ptr = NULL;
   BifrostObj*     clz_ptr = NULL;
 
@@ -514,7 +514,7 @@ void bfVM_stackLoadVariable(BifrostVM* self, size_t dst_idx, size_t inst_or_clas
   {
     BifrostObjInstance* const inst = (BifrostObjInstance*)obj;
 
-    bfVMValue* value = bfHashMap_get(&inst->fields, self->symbols[symbol]);
+    BifrostValue* value = bfHashMap_get(&inst->fields, self->symbols[symbol]);
 
     if (value)
     {
@@ -555,7 +555,7 @@ void bfVM_stackLoadVariable(BifrostVM* self, size_t dst_idx, size_t inst_or_clas
   }
 }
 
-static int bfVM__stackStoreVariable(BifrostVM* self, bfVMValue obj, string_range field_symbol, bfVMValue value)
+static int bfVM__stackStoreVariable(BifrostVM* self, BifrostValue obj, string_range field_symbol, BifrostValue value)
 {
   if (!bfVMValue_isPointer(obj))
   {
@@ -597,9 +597,9 @@ BifrostVMError bfVM_stackStoreVariable(BifrostVM* self, size_t inst_or_class_or_
   bfVM_assertStackIndex(self, value_idx);
   bfVM_assertStackIndex(self, inst_or_class_or_module);
 
-  const bfVMValue    obj      = self->stack_top[inst_or_class_or_module];
+  const BifrostValue    obj      = self->stack_top[inst_or_class_or_module];
   const string_range var_name = MakeString(field);
-  const bfVMValue    value    = self->stack_top[value_idx];
+  const BifrostValue    value    = self->stack_top[value_idx];
 
   if (bfVM__stackStoreVariable(self, obj, var_name, value))
   {
@@ -635,7 +635,7 @@ BifrostVMError bfVM_stackStoreClosure(BifrostVM* self, size_t inst_or_class_or_m
 {
   bfVM_assertStackIndex(self, inst_or_class_or_module);
 
-  const bfVMValue    obj      = self->stack_top[inst_or_class_or_module];
+  const BifrostValue    obj      = self->stack_top[inst_or_class_or_module];
   const string_range var_name = MakeString(field);
 
   if (bfVM__stackStoreVariable(self, obj, var_name, bfVMValue_fromPointer(bfObj_NewNativeFn(self, func, arity, num_statics, extra_data))))
@@ -651,7 +651,7 @@ BifrostVMError bfVM_closureSetStatic(BifrostVM* self, size_t closure_idx, size_t
   bfVM_assertStackIndex(self, closure_idx);
   bfVM_assertStackIndex(self, value_idx);
 
-  const bfVMValue obj = self->stack_top[closure_idx];
+  const BifrostValue obj = self->stack_top[closure_idx];
 
   if (!bfVMValue_isPointer(obj))
   {
@@ -681,7 +681,7 @@ void* bfVM_closureStackGetExtraData(BifrostVM* self, size_t closure_idx)
 {
   bfVM_assertStackIndex(self, closure_idx);
 
-  const bfVMValue obj = self->stack_top[closure_idx];
+  const BifrostValue obj = self->stack_top[closure_idx];
 
   if (!bfVMValue_isPointer(obj))
   {
@@ -746,7 +746,7 @@ void bfVM_stackSetNil(BifrostVM* self, size_t idx)
 void* bfVM_stackReadInstance(const BifrostVM* self, size_t idx)
 {
   bfVM_assertStackIndex(self, idx);
-  const bfVMValue value = self->stack_top[idx];
+  const BifrostValue value = self->stack_top[idx];
 
   if (bfVMValue_isNull(value))
   {
@@ -782,7 +782,7 @@ void* bfVM_stackReadInstance(const BifrostVM* self, size_t idx)
 const char* bfVM_stackReadString(const BifrostVM* self, size_t idx, size_t* out_size)
 {
   bfVM_assertStackIndex(self, idx);
-  bfVMValue value = self->stack_top[idx];
+  BifrostValue value = self->stack_top[idx];
 
   LibC_assert(bfVMValue_isPointer(value), "The value being read is not an object.");
 
@@ -803,7 +803,7 @@ const char* bfVM_stackReadString(const BifrostVM* self, size_t idx, size_t* out_
 double bfVM_stackReadNumber(const BifrostVM* self, size_t idx)
 {
   bfVM_assertStackIndex(self, idx);
-  const bfVMValue value = self->stack_top[idx];
+  const BifrostValue value = self->stack_top[idx];
 
   LibC_assert(bfVMValue_isNumber(value), "The value is not a number.");
 
@@ -813,14 +813,14 @@ double bfVM_stackReadNumber(const BifrostVM* self, size_t idx)
 bool bfVM_stackReadBool(const BifrostVM* self, size_t idx)
 {
   bfVM_assertStackIndex(self, idx);
-  const bfVMValue value = self->stack_top[idx];
+  const BifrostValue value = self->stack_top[idx];
 
   LibC_assert(bfVMValue_isBool(value), "The value is not a boolean.");
 
   return bfVMValue_isThuthy(value);
 }
 
-static int32_t bfVMGetArity(bfVMValue value)
+static int32_t bfVMGetArity(BifrostValue value)
 {
   LibC_assert(bfVMValue_isPointer(value), "Only object types have arity.");
 
@@ -843,7 +843,7 @@ static int32_t bfVMGetArity(bfVMValue value)
   return 0;
 }
 
-static BifrostVMType bfVMGetType(const bfVMValue value)
+static BifrostVMType bfVMGetType(const BifrostValue value)
 {
   if (bfVMValue_isBool(value))
   {
@@ -989,7 +989,7 @@ void bfInst_decode(const bfInstruction inst, uint8_t* op_out, uint32_t* ra_out, 
   *rsbx_out = bfInst_decodeRsBx(inst);
 }
 
-static bool bfVM_ensureStackspace(BifrostVM* self, size_t stack_space, const bfVMValue* top)
+static bool bfVM_ensureStackspace(BifrostVM* self, size_t stack_space, const BifrostValue* top)
 {
   const size_t stack_size     = bfVMArray_size(&self->stack);
   const size_t stack_used     = top - self->stack;
@@ -1090,8 +1090,8 @@ static BifrostVMError bfVM_execTopFrame(BifrostVM* self, BifrostObjFn* fn_to_run
 frame_start:;
   BifrostVMStackFrame* frame          = bfVMArray_back(&self->frames);
   BifrostObjModule*    current_module = frame->fn->module;
-  bfVMValue*           constants      = frame->fn->constants;
-  bfVMValue*           locals         = self->stack + frame->stack;
+  BifrostValue*           constants      = frame->fn->constants;
+  BifrostValue*           locals         = self->stack + frame->stack;
 
   while (true)
   {
@@ -1109,7 +1109,7 @@ frame_start:;
       }
       case BIFROST_VM_OP_LOAD_SYMBOL:
       {
-        const bfVMValue     obj_value  = locals[regs[REG_RB]];
+        const BifrostValue     obj_value  = locals[regs[REG_RB]];
         const uint32_t      symbol     = regs[REG_RC];
         const BifrostString symbol_str = self->symbols[symbol];
 
@@ -1126,7 +1126,7 @@ frame_start:;
         {
           BifrostObjInstance* inst = (BifrostObjInstance*)obj;
 
-          bfVMValue* value = bfHashMap_get(&inst->fields, self->symbols[symbol]);
+          BifrostValue* value = bfHashMap_get(&inst->fields, self->symbols[symbol]);
 
           if (value)
           {
@@ -1207,7 +1207,7 @@ frame_start:;
 
         if (action < BIFROST_VM_OP_LOAD_BASIC_CURRENT_MODULE)
         {
-          static const bfVMValue s_Literals[] =
+          static const BifrostValue s_Literals[] =
            {
             k_VMValueTrue,
             k_VMValueFalse,
@@ -1228,7 +1228,7 @@ frame_start:;
       }
       case BIFROST_VM_OP_NEW_CLZ:
       {
-        const bfVMValue value = locals[regs[REG_RBx]];
+        const BifrostValue value = locals[regs[REG_RBx]];
 
         if (bfVMValue_isPointer(value))
         {
@@ -1270,7 +1270,7 @@ frame_start:;
       }
       case BIFROST_VM_OP_CALL_FN:
       {
-        const bfVMValue value     = locals[regs[REG_RB]];
+        const BifrostValue value     = locals[regs[REG_RB]];
         const uint32_t  ra        = regs[REG_RA];
         const size_t    new_stack = frame->stack + ra;
         uint32_t        num_args  = regs[REG_RC];
@@ -1293,7 +1293,7 @@ frame_start:;
 
             if (call_sym < bfVMArray_size(&clz->symbols))
             {
-              const bfVMValue call_value = clz->symbols[call_sym].value;
+              const BifrostValue call_value = clz->symbols[call_sym].value;
 
               if (bfVMValue_isPointer(call_value))
               {
@@ -1309,9 +1309,9 @@ frame_start:;
                   BF_REFRESH_LOCALS();
                 }
 
-                bfVMValue* new_top = locals + ra;
+                BifrostValue* new_top = locals + ra;
 
-                LibC_memmove(new_top + 1, new_top, sizeof(bfVMValue) * num_args);
+                LibC_memmove(new_top + 1, new_top, sizeof(BifrostValue) * num_args);
 
                 new_top[0] = bfVMValue_fromPointer(instance);
                 obj        = call_obj;
@@ -1371,8 +1371,8 @@ frame_start:;
       }
       case BIFROST_VM_OP_MATH_ADD:
       {
-        const bfVMValue lhs = locals[regs[REG_RB]];
-        const bfVMValue rhs = locals[regs[REG_RC]];
+        const BifrostValue lhs = locals[regs[REG_RB]];
+        const BifrostValue rhs = locals[regs[REG_RC]];
 
         if (bfVMValue_isNumber(lhs) && bfVMValue_isNumber(rhs))
         {
@@ -1402,8 +1402,8 @@ frame_start:;
       }
       case BIFROST_VM_OP_MATH_SUB:
       {
-        const bfVMValue lhs = locals[regs[REG_RB]];
-        const bfVMValue rhs = locals[regs[REG_RC]];
+        const BifrostValue lhs = locals[regs[REG_RB]];
+        const BifrostValue rhs = locals[regs[REG_RC]];
 
         if (!bfVMValue_isNumber(lhs) || !bfVMValue_isNumber(rhs))
         {
@@ -1513,7 +1513,7 @@ done:
 BifrostVMError bfVM_call(BifrostVM* self, size_t idx, size_t args_start, int32_t num_args)
 {
   bfVM_assertStackIndex(self, idx);
-  const bfVMValue value = self->stack_top[idx];
+  const BifrostValue value = self->stack_top[idx];
   BifrostVMError  err   = BIFROST_VM_ERROR_NONE;
 
   LibC_assert(bfVMValue_isPointer(value), "");

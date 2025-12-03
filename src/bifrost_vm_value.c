@@ -17,59 +17,59 @@
 #include "bifrost_libc.h"    // LibC_memcpy
 #include "bifrost_vm_obj.h"  // For string cmp in bfVMValue_ee
 
-bool bfVMValue_isNull(const bfVMValue value)
+bool bfVMValue_isNull(const BifrostValue value)
 {
   return value == k_VMValueNull;
 }
 
-bool bfVMValue_isBool(const bfVMValue value)
+bool bfVMValue_isBool(const BifrostValue value)
 {
   return bfVMValue_isTrue(value) || bfVMValue_isFalse(value);
 }
 
-bool bfVMValue_isTrue(const bfVMValue value)
+bool bfVMValue_isTrue(const BifrostValue value)
 {
   return value == k_VMValueTrue;
 }
 
-bool bfVMValue_isFalse(const bfVMValue value)
+bool bfVMValue_isFalse(const BifrostValue value)
 {
   return value == k_VMValueFalse;
 }
 
-bool bfVMValue_isPointer(const bfVMValue value)
+bool bfVMValue_isPointer(const BifrostValue value)
 {
   return (value & k_VMValuePointerMask) == k_VMValuePointerMask;
 }
 
-bool bfVMValue_isNumber(const bfVMValue value)
+bool bfVMValue_isNumber(const BifrostValue value)
 {
   return (value & k_QuietNan) != k_QuietNan;
 }
 
-bfVMValue bfVMValue_fromNull()
+BifrostValue bfVMValue_fromNull()
 {
   return k_VMValueNull;
 }
 
-bfVMValue bfVMValue_fromBool(const bool value)
+BifrostValue bfVMValue_fromBool(const bool value)
 {
   return value ? k_VMValueTrue : k_VMValueFalse;
 }
 
-bfVMValue bfVMValue_fromNumber(const double value)
+BifrostValue bfVMValue_fromNumber(const double value)
 {
   uint64_t bits64;
   LibC_memcpy(&bits64, &value, sizeof(bits64));
   return bits64;
 }
 
-bfVMValue bfVMValue_fromPointer(const void* value)
+BifrostValue bfVMValue_fromPointer(const void* value)
 {
-  return value ? (bfVMValue)(k_VMValuePointerMask | (uint64_t)((uintptr_t)value)) : bfVMValue_fromNull();
+  return value ? (BifrostValue)(k_VMValuePointerMask | (uint64_t)((uintptr_t)value)) : bfVMValue_fromNull();
 }
 
-double bfVMValue_asNumber(const bfVMValue self)
+double bfVMValue_asNumber(const BifrostValue self)
 {
   double num;
   LibC_memcpy(&num, &self, sizeof(num));
@@ -77,12 +77,12 @@ double bfVMValue_asNumber(const bfVMValue self)
   return num;
 }
 
-void* bfVMValue_asPointer(const bfVMValue self)
+void* bfVMValue_asPointer(const BifrostValue self)
 {
   return (void*)((uintptr_t)(self & ~k_VMValuePointerMask));
 }
 
-bool bfVMValue_isThuthy(const bfVMValue self)
+bool bfVMValue_isThuthy(const BifrostValue self)
 {
   if (bfVMValue_isNull(self) || bfVMValue_isFalse(self) || (bfVMValue_isPointer(self) && !bfVMValue_asPointer(self)))
   {
@@ -94,7 +94,7 @@ bool bfVMValue_isThuthy(const bfVMValue self)
   }
 }
 
-bfVMValue bfVMValue_sub(const bfVMValue lhs, const bfVMValue rhs)
+BifrostValue bfVMValue_sub(const BifrostValue lhs, const BifrostValue rhs)
 {
   if (bfVMValue_isNumber(lhs) && bfVMValue_isNumber(rhs))
   {
@@ -106,7 +106,7 @@ bfVMValue bfVMValue_sub(const bfVMValue lhs, const bfVMValue rhs)
   }
 }
 
-bfVMValue bfVMValue_mul(const bfVMValue lhs, const bfVMValue rhs)
+BifrostValue bfVMValue_mul(const BifrostValue lhs, const BifrostValue rhs)
 {
   if (bfVMValue_isNumber(lhs) && bfVMValue_isNumber(rhs))
   {
@@ -118,7 +118,7 @@ bfVMValue bfVMValue_mul(const bfVMValue lhs, const bfVMValue rhs)
   }
 }
 
-bfVMValue bfVMValue_div(const bfVMValue lhs, const bfVMValue rhs)
+BifrostValue bfVMValue_div(const BifrostValue lhs, const BifrostValue rhs)
 {
   if (bfVMValue_isNumber(lhs) && bfVMValue_isNumber(rhs))
   {
@@ -130,7 +130,7 @@ bfVMValue bfVMValue_div(const bfVMValue lhs, const bfVMValue rhs)
   }
 }
 
-bool bfVMValue_ee(const bfVMValue lhs, const bfVMValue rhs)
+bool bfVMValue_ee(const BifrostValue lhs, const BifrostValue rhs)
 {
   if (bfVMValue_isNumber(lhs) && bfVMValue_isNumber(rhs))
   {
@@ -159,7 +159,7 @@ bool bfVMValue_ee(const bfVMValue lhs, const bfVMValue rhs)
   return lhs == rhs;
 }
 
-bool bfVMValue_lt(const bfVMValue lhs, const bfVMValue rhs)
+bool bfVMValue_lt(const BifrostValue lhs, const BifrostValue rhs)
 {
   if (bfVMValue_isNumber(lhs) && bfVMValue_isNumber(rhs))
   {
@@ -171,7 +171,7 @@ bool bfVMValue_lt(const bfVMValue lhs, const bfVMValue rhs)
   }
 }
 
-bool bfVMValue_gt(const bfVMValue lhs, const bfVMValue rhs)
+bool bfVMValue_gt(const BifrostValue lhs, const BifrostValue rhs)
 {
   if (bfVMValue_isNumber(lhs) && bfVMValue_isNumber(rhs))
   {
@@ -183,7 +183,7 @@ bool bfVMValue_gt(const bfVMValue lhs, const bfVMValue rhs)
   }
 }
 
-bool bfVMValue_ge(const bfVMValue lhs, const bfVMValue rhs)
+bool bfVMValue_ge(const BifrostValue lhs, const BifrostValue rhs)
 {
   if (bfVMValue_isNumber(lhs) && bfVMValue_isNumber(rhs))
   {

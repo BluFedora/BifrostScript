@@ -24,7 +24,7 @@ static void bfDbgIndentPrint(const int indent)
   }
 }
 
-size_t bfDbg_ValueToString(bfVMValue value, char* buffer, size_t buffer_size)
+size_t bfDbg_ValueToString(BifrostValue value, char* buffer, size_t buffer_size)
 {
   if (bfVMValue_isNumber(value))
   {
@@ -92,7 +92,7 @@ size_t bfDbg_ValueToString(bfVMValue value, char* buffer, size_t buffer_size)
   return 0u;
 }
 
-size_t bfDbg_ValueTypeToString(bfVMValue value, char* buffer, size_t buffer_size)
+size_t bfDbg_ValueTypeToString(BifrostValue value, char* buffer, size_t buffer_size)
 {
   if (bfVMValue_isNumber(value))
   {

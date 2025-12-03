@@ -12,7 +12,7 @@
 #define BIFROST_VM_DEBUG_H
 
 #include "bifrost_vm_instruction_op.h" /* bfInstruction */
-#include "bifrost_vm_value.h"          /* bfVMValue     */
+#include "bifrost_vm_value.h"          /* BifrostValue     */
 
 #if __cplusplus
 extern "C" {
@@ -22,8 +22,8 @@ typedef enum bfTokenType    bfTokenType;
 typedef struct bfToken      bfToken;
 typedef struct BifrostObjFn BifrostObjFn;
 
-size_t      bfDbg_ValueToString(bfVMValue value, char* buffer, size_t buffer_size);
-size_t      bfDbg_ValueTypeToString(bfVMValue value, char* buffer, size_t buffer_size);
+size_t      bfDbg_ValueToString(BifrostValue value, char* buffer, size_t buffer_size);
+size_t      bfDbg_ValueTypeToString(BifrostValue value, char* buffer, size_t buffer_size);
 const char* bfDbg_InstOpToString(const bfInstructionOp op);
 void        bfDbg_DisassembleInstructions(int indent, const bfInstruction* code, size_t code_length, uint16_t* code_to_line);
 void        bfDbg_DisassembleFunction(int indent, const BifrostObjFn* function);

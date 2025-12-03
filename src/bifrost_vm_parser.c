@@ -34,12 +34,12 @@
 
 extern uint32_t          bfVM_getSymbol(BifrostVM* self, string_range name);
 extern BifrostObjModule* bfVM_findModule(BifrostVM* self, const char* name, size_t name_len);
-extern bfVMValue         bfVM_stackFindVariable(BifrostObjModule* module_obj, const char* variable, size_t variable_len);
+extern BifrostValue         bfVM_stackFindVariable(BifrostObjModule* module_obj, const char* variable, size_t variable_len);
 extern BifrostObjModule* bfVM_importModule(BifrostVM* self, const char* from, const char* name, size_t name_len);
 
 /*  */
 
-uint16_t bfVM_xSetVariable(BifrostVMSymbol** variables, BifrostVM* vm, string_range name, bfVMValue value)
+uint16_t bfVM_xSetVariable(BifrostVMSymbol** variables, BifrostVM* vm, string_range name, BifrostValue value)
 {
   const size_t idx      = bfVM_getSymbol(vm, name);
   const size_t old_size = bfVMArray_size(variables);
@@ -334,7 +334,7 @@ static void parserVariableStore(BifrostParser* const self, VariableInfo variable
   }
 }
 
-static bfVMValue parserTokenConstexprValue(const BifrostParser* const self, const bfToken* token)
+static BifrostValue parserTokenConstexprValue(const BifrostParser* const self, const bfToken* token)
 {
   /* TODO(SR): The call to 'bfVM_createString' should be delayed, interning the string would save on memory. */
 
@@ -687,7 +687,7 @@ static void parseFunctionDecl(BifrostParser* const self)
   const string_range  name_str = parserBeginFunction(self, true);
   const int           arity    = parserParseFunction(self);
   BifrostObjFn* const fn       = bfObj_NewFunction(self->vm, self->current_module);
-  const bfVMValue     fn_value = bfVMValue_fromPointer(fn);
+  const BifrostValue     fn_value = bfVMValue_fromPointer(fn);
   bfParser_popBuilder(self, fn, arity);
 
   if (is_local)
@@ -875,7 +875,7 @@ static void Expr_parseGroup(BifrostParser* const self, ExprInfo* expr_info, cons
   bfParser_eat(self, BIFROST_TOKEN_R_PAREN, false, "Missing closing parenthesis for an group expression.");
 }
 
-static void bfParser_loadConstant(BifrostParser* const self, ExprInfo* expr_info, bfVMValue value)
+static void bfParser_loadConstant(BifrostParser* const self, ExprInfo* expr_info, BifrostValue value)
 {
   const uint32_t const_loc = bfFuncBuilder_addConstant(self->fn_builder, value);
 
@@ -884,7 +884,7 @@ static void bfParser_loadConstant(BifrostParser* const self, ExprInfo* expr_info
 
 static void Expr_parseLiteral(BifrostParser* const self, ExprInfo* expr_info, const bfToken* token)
 {
-  const bfVMValue constexpr_value = parserTokenConstexprValue(self, token);
+  const BifrostValue constexpr_value = parserTokenConstexprValue(self, token);
 
   if (bfVMValue_isTrue(constexpr_value))
   {
@@ -1225,7 +1225,7 @@ static void parseClassVarDecl(BifrostParser* const self, BifrostObjClass* clz, c
 
   bfParser_eat(self, BIFROST_TOKEN_IDENTIFIER, false, "Expected name after var keyword.");
 
-  bfVMValue initial_value = bfVMValue_fromNull();
+  BifrostValue initial_value = bfVMValue_fromNull();
 
   if (bfParser_match(self, BIFROST_TOKEN_EQUALS))
   {
@@ -1296,7 +1296,7 @@ static void parseClassDecl(BifrostParser* const self)
 
     if (bfParser_eat(self, BIFROST_TOKEN_IDENTIFIER, false, "Class name expected after ':' to specify the base class."))
     {
-      const bfVMValue base_class_val = bfVM_stackFindVariable(self->current_module, base_name_str.str_bgn, base_name_str.str_len);
+      const BifrostValue base_class_val = bfVM_stackFindVariable(self->current_module, base_name_str.str_bgn, base_name_str.str_len);
 
       if (bfVMValue_isPointer(base_class_val))
       {

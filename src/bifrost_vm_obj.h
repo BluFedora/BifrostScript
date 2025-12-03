@@ -14,7 +14,7 @@
 #ifndef BIFROST_VM_OBJ_H
 #define BIFROST_VM_OBJ_H
 
-#include "bifrost/bifrost_vm.h" /* bfNativeFnT, bfClassFinalizer, bfVMValue, BifrostHashMap */
+#include "bifrost/bifrost_vm.h" /* bfNativeFnT, bfClassFinalizer, BifrostValue, BifrostHashMap */
 
 #include "bifrost_vm_instruction_op.h"  // bfInstruction
 #include "bifrost_vm_lexer.h"           // string_range
@@ -25,7 +25,7 @@ extern "C" {
 
 #define bf_flex_array_member  //!< C99 Feature, this project does not compile in C++ mode.
 
-typedef enum BifrostVMObjType
+typedef enum BifrostObjType
 {
   BIFROST_VM_OBJ_FUNCTION,   // 0b000
   BIFROST_VM_OBJ_MODULE,     // 0b001
@@ -36,20 +36,20 @@ typedef enum BifrostVMObjType
   BIFROST_VM_OBJ_REFERENCE,  // 0b110
   BIFROST_VM_OBJ_WEAK_REF,   // 0b111
 
-} BifrostVMObjType;
+} BifrostObjType;
 
 #define BifrostVMObjType_mask 0x7 /*!< 0b111 */
 
 typedef struct BifrostVMSymbol
 {
   ConstBifrostString name;  /*!< Non owning string, [BifrostVM::symbols] is the owner. */
-  bfVMValue          value; /*!< The associated value.                                 */
+  BifrostValue       value; /*!< The associated value.                                 */
 
 } BifrostVMSymbol;
 
 typedef struct BifrostObj
 {
-  BifrostVMObjType   type;
+  BifrostObjType     type;
   unsigned char      gc_mark;
   struct BifrostObj* next;
 
@@ -61,7 +61,7 @@ typedef struct BifrostObjFn
   BifrostString            name;
   int32_t                  arity;  //!< An arity of -1 indicates variadic args [0, 512).
   uint16_t*                code_to_line;
-  bfVMValue*               constants;
+  BifrostValue*            constants;
   bfInstruction*           instructions;
   size_t                   needed_stack_space; /* params + locals + temps */
   struct BifrostObjModule* module;
@@ -97,7 +97,7 @@ typedef struct BifrostObjClass
 typedef struct BifrostObjInstance
 {
   INSTANCE_HEADER;
-  BifrostHashMap fields;                           // <ConstBifrostString (Non owning string, [BifrostVM::symbols] is the owner), bfVMValue>
+  BifrostHashMap fields;                           // <ConstBifrostString (Non owning string, [BifrostVM::symbols] is the owner), BifrostValue>
   char           extra_data[bf_flex_array_member]; /* This is for native class data. */
 
 } BifrostObjInstance;
@@ -112,13 +112,13 @@ typedef struct BifrostObjStr
 
 typedef struct BifrostObjNativeFn
 {
-  BifrostObj  super;
-  bfNativeFnT value;
-  int32_t     arity;
-  uint32_t    num_statics;
-  bfVMValue*  statics;  // Fixed size array.
-  uint16_t    extra_data_size;
-  char        extra_data[bf_flex_array_member]; /* This is for native data. */
+  BifrostObj    super;
+  bfNativeFnT   value;
+  int32_t       arity;
+  uint32_t      num_statics;
+  BifrostValue* statics;
+  uint16_t      extra_data_size;
+  char          extra_data[bf_flex_array_member]; /* This is for native data. */
 
 } BifrostObjNativeFn;
 

@@ -22,7 +22,7 @@
 extern "C" {
 #endif
 
-/* static uint8_t TAG_GET(const bfVMValue value) { return (uint8_t)(value & k_VMValueTagMask); } */
+/* static uint8_t TAG_GET(const BifrostValue value) { return (uint8_t)(value & k_VMValueTagMask); } */
 
 #define k_doubleSignBit      ((uint64_t)(1) << 63)
 #define k_QuietNan           (uint64_t)(0x7FFC000000000000ULL)
@@ -32,43 +32,43 @@ extern "C" {
 #define k_VMValueTagNull     (uint64_t)0x1
 #define k_VMValueTagTrue     (uint64_t)0x2
 #define k_VMValueTagFalse    (uint64_t)0x3 /* Tags Bits 4-6 unused */
-#define k_VMValueNull        (bfVMValue)((uint64_t)(k_QuietNan | (k_VMValueTagNull)))
-#define k_VMValueTrue        (bfVMValue)((uint64_t)(k_QuietNan | (k_VMValueTagTrue)))
-#define k_VMValueFalse       (bfVMValue)((uint64_t)(k_QuietNan | (k_VMValueTagNull)))
+#define k_VMValueNull        (BifrostValue)((uint64_t)(k_QuietNan | (k_VMValueTagNull)))
+#define k_VMValueTrue        (BifrostValue)((uint64_t)(k_QuietNan | (k_VMValueTagTrue)))
+#define k_VMValueFalse       (BifrostValue)((uint64_t)(k_QuietNan | (k_VMValueTagNull)))
 
-typedef uint64_t bfVMValue; /*!< The Nan-Tagged value representation of this scripting language. */
+typedef uint64_t BifrostValue; /*!< The Nan-Tagged value representation of this scripting language. */
 
 /* Type Checking */
 
-bool bfVMValue_isNull(const bfVMValue value);
-bool bfVMValue_isBool(const bfVMValue value);
-bool bfVMValue_isTrue(const bfVMValue value);
-bool bfVMValue_isFalse(const bfVMValue value);
-bool bfVMValue_isPointer(const bfVMValue value);
-bool bfVMValue_isNumber(const bfVMValue value);
+bool bfVMValue_isNull(const BifrostValue value);
+bool bfVMValue_isBool(const BifrostValue value);
+bool bfVMValue_isTrue(const BifrostValue value);
+bool bfVMValue_isFalse(const BifrostValue value);
+bool bfVMValue_isPointer(const BifrostValue value);
+bool bfVMValue_isNumber(const BifrostValue value);
 
 /* From Conversions */
 
-bfVMValue bfVMValue_fromNull(void);
-bfVMValue bfVMValue_fromBool(const bool value);
-bfVMValue bfVMValue_fromNumber(const double value);
-bfVMValue bfVMValue_fromPointer(const void* value);
+BifrostValue bfVMValue_fromNull(void);
+BifrostValue bfVMValue_fromBool(const bool value);
+BifrostValue bfVMValue_fromNumber(const double value);
+BifrostValue bfVMValue_fromPointer(const void* value);
 
 /* To Conversions */
 
-double bfVMValue_asNumber(const bfVMValue self);
-void*  bfVMValue_asPointer(const bfVMValue self);
-bool   bfVMValue_isThuthy(const bfVMValue self);
+double bfVMValue_asNumber(const BifrostValue self);
+void*  bfVMValue_asPointer(const BifrostValue self);
+bool   bfVMValue_isThuthy(const BifrostValue self);
 
 /* Binary Ops */
 
-bfVMValue bfVMValue_sub(const bfVMValue lhs, const bfVMValue rhs);
-bfVMValue bfVMValue_mul(const bfVMValue lhs, const bfVMValue rhs);
-bfVMValue bfVMValue_div(const bfVMValue lhs, const bfVMValue rhs);
-bool      bfVMValue_ee(const bfVMValue lhs, const bfVMValue rhs);
-bool      bfVMValue_lt(const bfVMValue lhs, const bfVMValue rhs);
-bool      bfVMValue_gt(const bfVMValue lhs, const bfVMValue rhs);
-bool      bfVMValue_ge(const bfVMValue lhs, const bfVMValue rhs);
+BifrostValue bfVMValue_sub(const BifrostValue lhs, const BifrostValue rhs);
+BifrostValue bfVMValue_mul(const BifrostValue lhs, const BifrostValue rhs);
+BifrostValue bfVMValue_div(const BifrostValue lhs, const BifrostValue rhs);
+bool      bfVMValue_ee(const BifrostValue lhs, const BifrostValue rhs);
+bool      bfVMValue_lt(const BifrostValue lhs, const BifrostValue rhs);
+bool      bfVMValue_gt(const BifrostValue lhs, const BifrostValue rhs);
+bool      bfVMValue_ge(const BifrostValue lhs, const BifrostValue rhs);
 
 #if __cplusplus
 }

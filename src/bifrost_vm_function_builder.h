@@ -13,7 +13,7 @@
 #define BIFROST_VM_FUNCTION_BUILDER_H
 
 #include "bifrost_vm_instruction_op.h" /* bfInstructionOp */
-#include "bifrost_vm_value.h"          /* bfVMValue        */
+#include "bifrost_vm_value.h"          /* BifrostValue        */
 
 #if __cplusplus
 extern "C" {
@@ -30,7 +30,7 @@ typedef struct BifrostVMFunctionBuilder
 {
   const char*      name;     /*!< Stored in the source so no need to dynamically alloc */
   size_t           name_len; /*!< Length of [BifrostVMFunctionBuilder::name] */
-  bfVMValue*       constants;
+  BifrostValue*       constants;
   string_range*    local_vars; /*!< Stored in the source so no need to dynamically alloc */
   bfScopeVarCount* local_var_scope_size;
   uint32_t*        instructions;
@@ -43,7 +43,7 @@ typedef struct BifrostVMFunctionBuilder
 
 void     bfFuncBuilder_ctor(BifrostVMFunctionBuilder* self, BifrostLexer* lexer);
 void     bfFuncBuilder_begin(BifrostVMFunctionBuilder* self, const char* name, size_t length);
-uint32_t bfFuncBuilder_addConstant(BifrostVMFunctionBuilder* self, const bfVMValue value);
+uint32_t bfFuncBuilder_addConstant(BifrostVMFunctionBuilder* self, const BifrostValue value);
 void     bfFuncBuilder_pushScope(BifrostVMFunctionBuilder* self);
 uint32_t bfFuncBuilder_declVariable(BifrostVMFunctionBuilder* self, const char* name, size_t length);
 uint16_t bfFuncBuilder_pushTemp(BifrostVMFunctionBuilder* self, uint16_t num_temps);
