@@ -100,10 +100,10 @@ void bfVM_ctor(BifrostVM* self, const BifrostVMParams* params)
 
   self->gc_is_running     = true;     // Make it so initialization doesn't cause a GC.
   self->params            = *params;  // Must happen first to copy over the allocator.
-  self->frames            = bfVMArray_newA(self, self->frames, 12);
-  self->stack             = bfVMArray_newA(self, self->stack, 10);
+  self->frames            = bfVMArray_new(self, self->frames, 12);
+  self->stack             = bfVMArray_new(self, self->stack, 10);
   self->stack_top         = self->stack;
-  self->symbols           = bfVMArray_newA(self, self->symbols, 10);
+  self->symbols           = bfVMArray_new(self, self->symbols, 10);
   self->gc_object_list    = NULL;
   self->last_error        = bfVMString_newLen(self, "", 0);
   self->bytes_allocated   = 0u;

@@ -553,7 +553,7 @@ void bfParser_ctor(BifrostParser* const self, struct BifrostVM* vm, BifrostLexer
   vm->parser_stack       = self;
   self->lexer            = lexer;
   self->current_token    = bfLexer_nextToken(lexer);
-  self->fn_builder_stack = bfVMArray_new(vm, BifrostVMFunctionBuilder, 2);
+  self->fn_builder_stack = bfVMArray_new(vm, self->fn_builder_stack, 2);
   self->has_error        = false;
   self->current_clz      = NULL;
   self->loop_stack       = NULL;

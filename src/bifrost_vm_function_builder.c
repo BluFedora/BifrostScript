@@ -22,8 +22,8 @@ void bfFuncBuilder_ctor(BifrostVMFunctionBuilder* self, BifrostLexer* lexer)
   self->constants            = NULL;
   self->instructions         = NULL;
   self->code_to_line         = NULL;
-  self->local_vars           = bfVMArray_new(lexer->vm, string_range, k_DefaultArraySize);
-  self->local_var_scope_size = bfVMArray_new(lexer->vm, bfScopeVarCount, k_DefaultArraySize);
+  self->local_vars           = bfVMArray_new(lexer->vm, self->local_vars, k_DefaultArraySize);
+  self->local_var_scope_size = bfVMArray_new(lexer->vm, self->local_var_scope_size, k_DefaultArraySize);
   self->max_local_idx        = 0;
   self->vm                   = lexer->vm;
   self->current_line_no      = &lexer->current_line_no;
@@ -35,9 +35,9 @@ void bfFuncBuilder_begin(BifrostVMFunctionBuilder* self, const char* name, size_
 
   self->name         = name;
   self->name_len     = length;
-  self->constants    = bfVMArray_new(self->vm, BifrostValue, k_DefaultArraySize);
-  self->instructions = bfVMArray_new(self->vm, uint32_t, k_DefaultArraySize);
-  self->code_to_line = bfVMArray_newA(self->vm, self->code_to_line, k_DefaultArraySize);
+  self->constants    = bfVMArray_new(self->vm, self->constants, k_DefaultArraySize);
+  self->instructions = bfVMArray_new(self->vm, self->instructions, k_DefaultArraySize);
+  self->code_to_line = bfVMArray_new(self->vm, self->code_to_line, k_DefaultArraySize);
   bfVMArray_clear(&self->local_vars);
   bfVMArray_clear(&self->local_var_scope_size);
 

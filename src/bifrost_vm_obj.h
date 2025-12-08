@@ -166,8 +166,7 @@ void                 bfObj_Finalize(struct BifrostVM* self, BifrostObj* obj);
 
 /* array */
 
-#define bfVMArray_new(vm, T, initial_size)    (T*)_bfVMArrayT_new((vm), sizeof(T), (initial_size))
-#define bfVMArray_newA(vm, arr, initial_size) _bfVMArrayT_new((vm), sizeof((arr)[0]), (initial_size))
+#define bfVMArray_new(vm, arr, initial_size) _bfVMArrayT_new((vm), sizeof((arr)[0]), (initial_size))
 
 void*  _bfVMArrayT_new(struct BifrostVM* vm, const size_t stride, const size_t initial_size);
 size_t bfVMArray_size(const void* const self);
@@ -182,7 +181,6 @@ void   bfVMArray_delete(struct BifrostVM* vm, void* const self);
 /* string */
 
 BifrostString bfVMString_newLen(struct BifrostVM* vm, const char* initial_data, size_t string_length);
-const char*   bfVMString_cstr(ConstBifrostString self);
 size_t        bfVMString_length(ConstBifrostString self);
 void          bfVMString_reserve(struct BifrostVM* vm, BifrostString* self, size_t new_capacity);
 void          bfVMString_sprintf(struct BifrostVM* vm, BifrostString* self, const char* format, ...);

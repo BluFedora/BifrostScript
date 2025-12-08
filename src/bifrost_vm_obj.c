@@ -45,7 +45,7 @@ BifrostObjModule* bfObj_NewModule(struct BifrostVM* self, string_range name)
   BifrostObjModule* module = AllocateVMObject(BifrostObjModule, self, BIFROST_VM_OBJ_MODULE);
 
   module->name      = bfVMString_newLen(self, name.str_bgn, name.str_len);
-  module->variables = bfVMArray_newA(self, module->variables, 32);
+  module->variables = bfVMArray_new(self, module->variables, 32);
   LibC_memset(&module->init_fn, 0x0, sizeof(module->init_fn));
   module->init_fn.module = module;
 
@@ -61,8 +61,8 @@ BifrostObjClass* bfObj_NewClass(struct BifrostVM* self, BifrostObjModule* module
   clz->name               = bfVMString_newLen(self, name.str_bgn, name.str_len);
   clz->base_clz           = base_clz;
   clz->module             = module;
-  clz->symbols            = bfVMArray_newA(self, clz->symbols, 32);
-  clz->field_initializers = bfVMArray_newA(self, clz->field_initializers, 32);
+  clz->symbols            = bfVMArray_new(self, clz->symbols, 32);
+  clz->field_initializers = bfVMArray_new(self, clz->field_initializers, 32);
   clz->extra_data         = extra_data;
   clz->finalizer          = NULL;
 
@@ -496,11 +496,6 @@ BifrostString bfVMString_newLen(struct BifrostVM* vm, const char* initial_data, 
   return NULL;
 }
 
-const char* bfVMString_cstr(ConstBifrostString self)
-{
-  return self;
-}
-
 size_t bfVMString_length(ConstBifrostString self)
 {
   return bfVMString_getHeader(self)->length;
@@ -605,7 +600,7 @@ int bfVMString_ccmpn(ConstBifrostString self, const char* other, size_t length)
     return -1;
   }
 
-  return LibC_strncmp(bfVMString_cstr(self), other, length);
+  return LibC_strncmp(self, other, length);
 }
 
 uint32_t bfVMString_hashN(const char* str, size_t length)
