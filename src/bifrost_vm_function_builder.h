@@ -30,7 +30,7 @@ typedef struct BifrostVMFunctionBuilder
 {
   const char*      name;     /*!< Stored in the source so no need to dynamically alloc */
   size_t           name_len; /*!< Length of [BifrostVMFunctionBuilder::name] */
-  BifrostValue*       constants;
+  BifrostValue*    constants;
   string_range*    local_vars; /*!< Stored in the source so no need to dynamically alloc */
   bfScopeVarCount* local_var_scope_size;
   uint32_t*        instructions;

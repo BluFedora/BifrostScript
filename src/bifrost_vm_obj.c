@@ -297,7 +297,7 @@ void bfObj_Finalize(struct BifrostVM* self, BifrostObj* obj)
 
 /* array */
 
-typedef struct
+typedef struct ArrayDefaultCompareData
 {
   size_t      stride;
   const void* key;
@@ -306,7 +306,7 @@ typedef struct
 
 #define SELF_CAST(s) ((unsigned char**)(s))
 
-typedef struct
+typedef struct BifrostArrayHeader
 {
   size_t capacity;
   size_t size;
@@ -347,7 +347,6 @@ void* _bfVMArrayT_new(struct BifrostVM* vm, const size_t stride, const size_t in
   return (uint8_t*)self + sizeof(BifrostArrayHeader);
 }
 
-// bfVMArray_push
 static void* Array_end(const void* const self)
 {
   BifrostArrayHeader* const header = Array_getHeader(*SELF_CAST(self));
@@ -405,16 +404,6 @@ void bfVMArray_resize(struct BifrostVM* vm, void* const self, const size_t size)
   Array_getHeader(*SELF_CAST(self))->size = size;
 }
 
-void bfVMArray_push(struct BifrostVM* vm, void* const self, const void* const data)
-{
-  const size_t stride = Array_getHeader(*SELF_CAST(self))->stride;
-
-  Array_reserve(vm, self, bfVMArray_size(self) + 1);
-
-  LibC_memcpy(Array_end(self), data, stride);
-  ++Array_getHeader(*SELF_CAST(self))->size;
-}
-
 void* bfVMArray_emplace(struct BifrostVM* vm, void* const self)
 {
   return bfVMArray_emplaceN(vm, self, 1);
@@ -431,17 +420,12 @@ void* bfVMArray_emplaceN(struct BifrostVM* vm, void* const self, const size_t nu
   return new_element;
 }
 
-void* bfVMArray_at(const void* const self, const size_t index)
-{
-  return *(char**)self + (Array_getHeader(*SELF_CAST(self))->stride * index);
-}
-
 void* bfVMArray_pop(void* const self)
 {
   LibC_assert(bfVMArray_size(self) != 0, "Array_pop:: attempt to pop empty array");
 
   BifrostArrayHeader* const header      = Array_getHeader(*SELF_CAST(self));
-  void* const               old_element = bfVMArray_at(self, header->size - 1);
+  void* const               old_element = bfVMArray_back(self);
   --header->size;
 
   return old_element;
@@ -622,19 +606,6 @@ int bfVMString_ccmpn(ConstBifrostString self, const char* other, size_t length)
   }
 
   return LibC_strncmp(bfVMString_cstr(self), other, length);
-}
-
-uint32_t bfVMString_hash(const char* str)
-{
-  uint32_t hash = 0x811c9dc5;
-
-  while (*str)
-  {
-    hash ^= (unsigned char)*str++;
-    hash *= 0x01000193;
-  }
-
-  return hash;
 }
 
 uint32_t bfVMString_hashN(const char* str, size_t length)

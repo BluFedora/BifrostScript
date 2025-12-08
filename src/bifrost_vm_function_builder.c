@@ -56,7 +56,7 @@ uint32_t bfFuncBuilder_addConstant(BifrostVMFunctionBuilder* self, const Bifrost
     }
   }
 
-  bfVMArray_push(self->vm, &self->constants, &value);
+  *(BifrostValue*)bfVMArray_emplace(self->vm, &self->constants) = value;
 
   return (uint32_t)num_constants;
 }

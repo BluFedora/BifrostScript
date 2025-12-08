@@ -727,7 +727,7 @@ static void parseImport(BifrostParser* const self)
 
   const bfToken      name_token = self->current_token;
   const string_range name_str   = name_token.str_range;
-  bfParser_eat(self, BIFROST_TOKEN_CONST_STR, false, "Import statments must be followed by a constant string.");
+  bfParser_eat(self, BIFROST_TOKEN_CONST_STR, false, "Import statements must be followed by a constant string.");
 
   BifrostObjModule* const imported_module = bfVM_importModule(self->vm, self->current_module->name, name_str.str_bgn, name_str.str_len);
 
@@ -819,8 +819,6 @@ static void parseForStatement(BifrostParser* const self)
 
   bfFuncBuilder_pushScope(self->fn_builder);
   {
-    LoopInfo loop;
-
     if (!bfParser_match(self, BIFROST_TOKEN_SEMI_COLON))
     {
       Parser_parseStatement(self);
@@ -855,6 +853,8 @@ static void parseForStatement(BifrostParser* const self)
     parserPatchJumpRev(self, inc_to_cond, BIFROST_VM_INVALID_SLOT, false);
 
     parserPatchJump(self, cond_to_loop, cond_loc, false);
+
+    LoopInfo loop;
     loopPush(self, &loop);
     parseBlock(self);
     parserPatchJumpRev(self, loop_to_inc, BIFROST_VM_INVALID_SLOT, false);

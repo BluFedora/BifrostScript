@@ -174,14 +174,12 @@ typedef int (*bfVMArrayFindCompare)(const void*, const void*);
 
 void*  _bfVMArrayT_new(struct BifrostVM* vm, const size_t stride, const size_t initial_size);
 size_t bfVMArray_size(const void* const self);
-void*  bfVMArray_at(const void* const self, const size_t index);
 void   bfVMArray_resize(struct BifrostVM* vm, void* const self, const size_t size);
 void*  bfVMArray_emplace(struct BifrostVM* vm, void* const self);
 void*  bfVMArray_emplaceN(struct BifrostVM* vm, void* const self, const size_t num_elements);
 void*  bfVMArray_pop(void* const self);
 void*  bfVMArray_back(const void* const self);
 void   bfVMArray_clear(void* const self);
-void   bfVMArray_push(struct BifrostVM* vm, void* const self, const void* const data);
 void   bfVMArray_delete(struct BifrostVM* vm, void* const self);
 
 /* string */
@@ -194,7 +192,6 @@ void          bfVMString_sprintf(struct BifrostVM* vm, BifrostString* self, cons
 void          bfVMString_unescape(BifrostString self);
 int           bfVMString_cmp(ConstBifrostString self, ConstBifrostString other);
 int           bfVMString_ccmpn(ConstBifrostString self, const char* other, size_t length);
-uint32_t      bfVMString_hash(const char* str);
 uint32_t      bfVMString_hashN(const char* str, size_t length);
 void          bfVMString_delete(struct BifrostVM* vm, BifrostString self);
 

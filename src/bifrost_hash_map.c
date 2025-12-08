@@ -21,7 +21,7 @@ static bfHashNode* bfHashMap_newNode(struct BifrostVM* vm, const void* key, size
 {
   vm->gc_is_running = 1;
 
-  bfHashNode* const node = (bfHashNode*)bfGC_AllocMemory(vm, NULL, 0u, sizeof(bfHashNode) + value_size);
+  bfHashNode* const node = bfGC_AllocMemory(vm, NULL, 0u, sizeof(bfHashNode) + value_size);
 
   node->key  = key;
   node->next = next;
@@ -198,9 +198,9 @@ void bfHashMap_itGetNext(const BifrostHashMap* self, bfHashMapIter* it)
   {
     for (int i = (it->index + 1); i < (int)self->num_buckets; ++i)
     {
-      bfHashNode* cursor = self->buckets[i];
+      bfHashNode* const cursor = self->buckets[i];
 
-      if (cursor)
+      if (cursor != NULL)
       {
         it->key   = cursor->key;
         it->value = cursor->value;
