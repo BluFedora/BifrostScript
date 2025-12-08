@@ -23,7 +23,7 @@ void bfFuncBuilder_ctor(BifrostVMFunctionBuilder* self, BifrostLexer* lexer)
   self->instructions         = NULL;
   self->code_to_line         = NULL;
   self->local_vars           = bfVMArray_new(lexer->vm, string_range, k_DefaultArraySize);
-  self->local_var_scope_size = bfVMArray_new(lexer->vm, int, k_DefaultArraySize);
+  self->local_var_scope_size = bfVMArray_new(lexer->vm, bfScopeVarCount, k_DefaultArraySize);
   self->max_local_idx        = 0;
   self->vm                   = lexer->vm;
   self->current_line_no      = &lexer->current_line_no;
@@ -67,7 +67,7 @@ void bfFuncBuilder_pushScope(BifrostVMFunctionBuilder* self)
   *count                 = 0;
 }
 
-static inline size_t bfFuncBuilder__getVariable(BifrostVMFunctionBuilder* self, const char* name, size_t length, bool in_current_scope)
+inline static bool bfFuncBuilder__getVariable(const BifrostVMFunctionBuilder* self, const char* name, size_t length, bool in_current_scope, uint16_t* const out_index)
 {
   const int* count = (const int*)bfVMArray_back(&self->local_var_scope_size);
   const int  end   = in_current_scope ? *count : (int)bfVMArray_size(&self->local_vars);
@@ -80,37 +80,39 @@ static inline size_t bfFuncBuilder__getVariable(BifrostVMFunctionBuilder* self, 
 
     if (length == var->str_len && bfVMString_ccmpn(name, var->str_bgn, length) == 0)
     {
-      return i;
+      *out_index = (uint16_t)i;
+      return true;
     }
   }
 
-  return BIFROST_ARRAY_INVALID_INDEX;
+  return false;
 }
 
-uint32_t bfFuncBuilder_declVariable(BifrostVMFunctionBuilder* self, const char* name, size_t length)
+uint16_t bfFuncBuilder_declVariable(BifrostVMFunctionBuilder* self, const char* name, size_t length)
 {
-  const size_t prev_decl = bfFuncBuilder__getVariable(self, name, length, true);
-
-  if (prev_decl != BIFROST_ARRAY_INVALID_INDEX)
+  uint16_t prev_decl;
+  if (bfFuncBuilder__getVariable(self, name, length, true, &prev_decl))
   {
     bfVM_SetLastError(BIFROST_VM_ERROR_COMPILE, self->vm, (int)*self->current_line_no, "ERROR: [%.*s] already declared.\n", (int)length, name);
     return (uint32_t)prev_decl;
   }
-
-  const size_t  var_loc = bfVMArray_size(&self->local_vars);
-  string_range* var     = bfVMArray_emplace(self->vm, &self->local_vars);
-
-  *var = MakeStringLen(name, length);
-
-  int* count = (int*)bfVMArray_back(&self->local_var_scope_size);
-  ++(*count);
-
-  if (self->max_local_idx < var_loc)
+  else
   {
-    self->max_local_idx = var_loc;
-  }
+    const size_t  var_loc = bfVMArray_size(&self->local_vars);
+    string_range* var     = bfVMArray_emplace(self->vm, &self->local_vars);
 
-  return (uint32_t)var_loc;
+    *var = MakeStringLen(name, length);
+
+    int* count = (int*)bfVMArray_back(&self->local_var_scope_size);
+    ++(*count);
+
+    if (self->max_local_idx < var_loc)
+    {
+      self->max_local_idx = var_loc;
+    }
+
+    return (uint16_t)var_loc;
+  }
 }
 
 uint16_t bfFuncBuilder_pushTemp(BifrostVMFunctionBuilder* self, uint16_t num_temps)
@@ -137,9 +139,10 @@ void bfFuncBuilder_popTemp(BifrostVMFunctionBuilder* self, uint16_t start)
   bfVMArray_resize(self->vm, &self->local_vars, start);
 }
 
-size_t bfFuncBuilder_getVariable(BifrostVMFunctionBuilder* self, const char* name, size_t length)
+uint16_t bfFuncBuilder_getVariable(BifrostVMFunctionBuilder* self, const char* name, size_t length)
 {
-  return bfFuncBuilder__getVariable(self, name, length, false);
+  uint16_t variable_idx;
+  return bfFuncBuilder__getVariable(self, name, length, false, &variable_idx) ? (uint16_t)variable_idx : BIFROST_VM_INVALID_SLOT;
 }
 
 void bfFuncBuilder_popScope(BifrostVMFunctionBuilder* self)

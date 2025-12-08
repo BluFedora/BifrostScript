@@ -19,12 +19,16 @@
 extern "C" {
 #endif
 
+#define BIFROST_VAR_LOCATION_BITS 15
+
+static const uint16_t BIFROST_VM_INVALID_SLOT = (1 << BIFROST_VAR_LOCATION_BITS) - 1;
+
 typedef struct BifrostVM    BifrostVM;
 typedef struct BifrostObjFn BifrostObjFn;
 typedef struct BifrostLexer BifrostLexer;
 typedef struct string_range string_range;
 
-typedef int bfScopeVarCount;
+typedef unsigned int bfScopeVarCount;
 
 typedef struct BifrostVMFunctionBuilder
 {
@@ -45,10 +49,10 @@ void     bfFuncBuilder_ctor(BifrostVMFunctionBuilder* self, BifrostLexer* lexer)
 void     bfFuncBuilder_begin(BifrostVMFunctionBuilder* self, const char* name, size_t length);
 uint32_t bfFuncBuilder_addConstant(BifrostVMFunctionBuilder* self, const BifrostValue value);
 void     bfFuncBuilder_pushScope(BifrostVMFunctionBuilder* self);
-uint32_t bfFuncBuilder_declVariable(BifrostVMFunctionBuilder* self, const char* name, size_t length);
+uint16_t bfFuncBuilder_declVariable(BifrostVMFunctionBuilder* self, const char* name, size_t length);
 uint16_t bfFuncBuilder_pushTemp(BifrostVMFunctionBuilder* self, uint16_t num_temps);
 void     bfFuncBuilder_popTemp(BifrostVMFunctionBuilder* self, uint16_t start);
-size_t   bfFuncBuilder_getVariable(BifrostVMFunctionBuilder* self, const char* name, size_t length);
+uint16_t bfFuncBuilder_getVariable(BifrostVMFunctionBuilder* self, const char* name, size_t length);
 void     bfFuncBuilder_popScope(BifrostVMFunctionBuilder* self);
 void     bfFuncBuilder_addInstABC(BifrostVMFunctionBuilder* self, bfInstructionOp op, uint16_t a, uint16_t b, uint16_t c);
 void     bfFuncBuilder_addInstABx(BifrostVMFunctionBuilder* self, bfInstructionOp op, uint16_t a, uint32_t bx);

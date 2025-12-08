@@ -34,7 +34,7 @@
 
 extern uint32_t          bfVM_getSymbol(BifrostVM* self, string_range name);
 extern BifrostObjModule* bfVM_findModule(BifrostVM* self, const char* name, size_t name_len);
-extern BifrostValue         bfVM_stackFindVariable(BifrostObjModule* module_obj, const char* variable, size_t variable_len);
+extern BifrostValue      bfVM_stackFindVariable(BifrostObjModule* module_obj, const char* variable, size_t variable_len);
 extern BifrostObjModule* bfVM_importModule(BifrostVM* self, const char* from, const char* name, size_t name_len);
 
 /*  */
@@ -67,10 +67,6 @@ static uint16_t parserGetSymbol(const BifrostParser* const self, const string_ra
 {
   return (uint16_t)bfVM_getSymbol(self->vm, name);
 }
-
-#define BIFROST_VAR_LOCATION_BITS 15
-
-static const uint16_t BIFROST_VM_INVALID_SLOT = (1 << BIFROST_VAR_LOCATION_BITS) - 1;
 
 /* Variable Info */
 
@@ -687,7 +683,7 @@ static void parseFunctionDecl(BifrostParser* const self)
   const string_range  name_str = parserBeginFunction(self, true);
   const int           arity    = parserParseFunction(self);
   BifrostObjFn* const fn       = bfObj_NewFunction(self->vm, self->current_module);
-  const BifrostValue     fn_value = bfVMValue_fromPointer(fn);
+  const BifrostValue  fn_value = bfVMValue_fromPointer(fn);
   bfParser_popBuilder(self, fn, arity);
 
   if (is_local)
@@ -1364,7 +1360,7 @@ static void parseClassDecl(BifrostParser* const self)
       else
       {
         Parser_EmitError(self, "Invalid declaration in class. Currently only 'var' and 'func' are supported.");
-        Parser_parseStatement(self); // TODO(SR): This is not right, but there is nothing that can correctly happen here.
+        Parser_parseStatement(self);  // TODO(SR): This is not right, but there is nothing that can correctly happen here.
       }
     }
   }

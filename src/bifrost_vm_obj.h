@@ -166,11 +166,8 @@ void                 bfObj_Finalize(struct BifrostVM* self, BifrostObj* obj);
 
 /* array */
 
-#define BIFROST_ARRAY_INVALID_INDEX           ((size_t)(-1))
 #define bfVMArray_new(vm, T, initial_size)    (T*)_bfVMArrayT_new((vm), sizeof(T), (initial_size))
 #define bfVMArray_newA(vm, arr, initial_size) _bfVMArrayT_new((vm), sizeof((arr)[0]), (initial_size))
-
-typedef int (*bfVMArrayFindCompare)(const void*, const void*);
 
 void*  _bfVMArrayT_new(struct BifrostVM* vm, const size_t stride, const size_t initial_size);
 size_t bfVMArray_size(const void* const self);
