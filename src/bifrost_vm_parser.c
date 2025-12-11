@@ -559,7 +559,7 @@ void bfParser_ctor(BifrostParser* const self, struct BifrostVM* vm, BifrostLexer
   self->loop_stack       = NULL;
   self->vm               = vm;
   self->current_module   = current_module;
-  bfParser_pushBuilder(self, self->current_module->name, bfVMString_length(self->current_module->name));
+  bfParser_pushBuilder(self, current_module->name, bfVMString_length(current_module->name));
 }
 
 bool bfParser_compile(BifrostParser* const self)
@@ -767,11 +767,11 @@ static void parseImport(BifrostParser* const self)
         continue;
       }
 
-      const string_range variable_name = MakeStringLen(module_symbol->name, bfVMString_length(module_symbol->name));
-
       // TODO(SR): The way symbols are stored is dumb and leaves lots of empty slots.
       if (!bfVMValue_isNull(module_symbol->value))
       {
+        const string_range variable_name = MakeStringLen(module_symbol->name, bfVMString_length(module_symbol->name));
+
         bfVM_xSetVariable(&self->current_module->variables, self->vm, variable_name, module_symbol->value);
       }
     }

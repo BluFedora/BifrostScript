@@ -167,7 +167,7 @@ static size_t bfGCSweep(struct BifrostVM* self)
   {
     BifrostObj* const next = g_cursor->next;
 
-    if (g_cursor->type == BIFROST_VM_OBJ_INSTANCE || g_cursor->type == BIFROST_VM_OBJ_REFERENCE)
+    if (g_cursor->type == BIFROST_VM_OBJ_INSTANCE || g_cursor->type == BIFROST_VM_OBJ_NATIVE_INSTANCE)
     {
       BifrostObjInstance* const inst = (BifrostObjInstance*)g_cursor;
       BifrostObjClass* const    clz  = inst->clz;
@@ -424,7 +424,7 @@ static void bfGCMarkObj(BifrostObj* obj, uint8_t mark_value)
       }
       case BIFROST_VM_OBJ_STRING:
         break;
-      case BIFROST_VM_OBJ_REFERENCE:
+      case BIFROST_VM_OBJ_NATIVE_INSTANCE:
       {
         BifrostObjReference* const ref = (BifrostObjReference*)obj;
 
@@ -434,7 +434,7 @@ static void bfGCMarkObj(BifrostObj* obj, uint8_t mark_value)
         }
         break;
       }
-      case BIFROST_VM_OBJ_WEAK_REF:
+      case BIFROST_VM_OBJ_NATIVE_WEAK_REF:
       {
         BifrostObjWeakRef* const weak_ref = (BifrostObjWeakRef*)obj;
 

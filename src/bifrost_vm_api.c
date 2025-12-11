@@ -91,7 +91,7 @@ static int ModuleMap_cmp(const void* lhs, const void* rhs)
   const BifrostObjStr* str_lhs = (const BifrostObjStr*)lhs;
   const BifrostObjStr* str_rhs = (const BifrostObjStr*)rhs;
 
-  return str_lhs->hash == str_rhs->hash && bfVMString_cmp(str_lhs->value, str_rhs->value) == 0;
+  return StringCmp_Cmp(StringCmp_FromBStr(str_lhs), StringCmp_FromBStr(str_rhs));
 }
 
 void bfVM_ctor(BifrostVM* self, const BifrostVMParams* params)
@@ -238,20 +238,12 @@ BifrostVMError bfVM_moduleLoad(BifrostVM* self, size_t idx, const char* module, 
   return BIFROST_VM_ERROR_MODULE_NOT_FOUND;
 }
 
-typedef struct TempModuleName
-{
-  const char* str;
-  size_t      str_len;
-  unsigned    hash;
-
-} TempModuleName;
-
 static int bfVM_moduleUnloadCmp(const void* lhs, const void* rhs)
 {
-  const TempModuleName* str_lhs = (const TempModuleName*)lhs;
-  const BifrostObjStr*  str_rhs = (const BifrostObjStr*)rhs;
+  const StringCmp*     str_lhs = (const StringCmp*)lhs;
+  const BifrostObjStr* str_rhs = (const BifrostObjStr*)rhs;
 
-  return str_lhs->hash == str_rhs->hash && bfVMString_ccmpn(str_rhs->value, str_lhs->str, str_lhs->str_len) == 0;
+  return StringCmp_Cmp(*str_lhs, StringCmp_FromBStr(str_rhs));
 }
 
 void bfVM_moduleUnload(BifrostVM* self, const char* module, const size_t module_name_len)
@@ -261,14 +253,10 @@ void bfVM_moduleUnload(BifrostVM* self, const char* module, const size_t module_
       The GC will handle deleting the module and
       string whenever we are low on memory.
    */
-  const TempModuleName tmn =
-   {
-    .str     = module,
-    .str_len = module_name_len,
-    .hash    = bfVMString_hashN(module, module_name_len),
-   };
 
-  bfHashMap_removeCmp(&self->modules, &tmn, &bfVM_moduleUnloadCmp);
+  const StringCmp str_cmp = StringCmp_Make(module, module_name_len);
+
+  bfHashMap_removeCmp(&self->modules, &str_cmp, &bfVM_moduleUnloadCmp);
 }
 
 void bfVM_moduleUnloadAll(BifrostVM* self)
@@ -479,7 +467,7 @@ void bfVM_referenceSetClass(BifrostVM* self, size_t idx, size_t clz_idx)
   BifrostObj*        obj_ptr = NULL;
   BifrostObj*        clz_ptr = NULL;
 
-  if (bfVMGrabObjectsOfType(obj, clz, BIFROST_VM_OBJ_REFERENCE, BIFROST_VM_OBJ_CLASS, &obj_ptr, &clz_ptr))
+  if (bfVMGrabObjectsOfType(obj, clz, BIFROST_VM_OBJ_NATIVE_INSTANCE, BIFROST_VM_OBJ_CLASS, &obj_ptr, &clz_ptr))
   {
     ((BifrostObjReference*)obj_ptr)->clz = (BifrostObjClass*)clz_ptr;
   }
@@ -763,13 +751,13 @@ void* bfVM_stackReadInstance(const BifrostVM* self, size_t idx)
     return inst->extra_data;
   }
 
-  if (obj->type == BIFROST_VM_OBJ_REFERENCE)
+  if (obj->type == BIFROST_VM_OBJ_NATIVE_INSTANCE)
   {
     BifrostObjReference* inst = (BifrostObjReference*)obj;
     return inst->extra_data;
   }
 
-  if (obj->type == BIFROST_VM_OBJ_WEAK_REF)
+  if (obj->type == BIFROST_VM_OBJ_NATIVE_WEAK_REF)
   {
     BifrostObjWeakRef* inst = (BifrostObjWeakRef*)obj;
     return inst->data;
@@ -861,7 +849,7 @@ static BifrostVMType bfVMGetType(const BifrostValue value)
     {
       return BIFROST_VM_STRING;
     }
-    else if (obj->type == BIFROST_VM_OBJ_INSTANCE || obj->type == BIFROST_VM_OBJ_REFERENCE || obj->type == BIFROST_VM_OBJ_WEAK_REF)
+    else if (obj->type == BIFROST_VM_OBJ_INSTANCE || obj->type == BIFROST_VM_OBJ_NATIVE_INSTANCE || obj->type == BIFROST_VM_OBJ_NATIVE_WEAK_REF)
     {
       return BIFROST_VM_OBJECT;
     }
@@ -1137,7 +1125,7 @@ frame_start:;
             obj = &inst->clz->super;
           }
         }
-        else if (obj->type == BIFROST_VM_OBJ_REFERENCE || obj->type == BIFROST_VM_OBJ_WEAK_REF)
+        else if (obj->type == BIFROST_VM_OBJ_NATIVE_INSTANCE || obj->type == BIFROST_VM_OBJ_NATIVE_WEAK_REF)
         {
           BifrostObjReference* inst = (BifrostObjReference*)obj;
 
@@ -1196,7 +1184,7 @@ frame_start:;
 
           if (err_store == 2)
           {
-            BF_RUNTIME_ERROR("ERRRO, storing a symbol on a non instance or class obj.\n");
+            BF_RUNTIME_ERROR("Cannot store a symbol on a non instance or class obj.\n");
           }
         }
         break;
@@ -1280,7 +1268,7 @@ frame_start:;
           BifrostObj*               obj      = bfVMValue_asPointer(value);
           const BifrostObjInstance* instance = (const BifrostObjInstance*)obj;
 
-          if (obj->type == BIFROST_VM_OBJ_INSTANCE || obj->type == BIFROST_VM_OBJ_REFERENCE || obj->type == BIFROST_VM_OBJ_WEAK_REF)
+          if (obj->type == BIFROST_VM_OBJ_INSTANCE || obj->type == BIFROST_VM_OBJ_NATIVE_INSTANCE || obj->type == BIFROST_VM_OBJ_NATIVE_WEAK_REF)
           {
             instance = (const BifrostObjInstance*)obj;
             obj      = instance->clz ? &instance->clz->super : obj;
@@ -1661,15 +1649,14 @@ void bfVM_dtor(BifrostVM* self)
 
 BifrostObjModule* bfVM_findModule(BifrostVM* self, const char* name, size_t name_len)
 {
-  const size_t    hash    = bfVMString_hashN(name, name_len);
+  const StringCmp str_cmp = StringCmp_Make(name, name_len);
   BifrostHashMap* modules = &self->modules;
 
   bfHashMapFor(it, modules)
   {
-    const BifrostObjStr* key     = it.key;
-    const size_t         key_len = bfVMString_length(key->value);
+    const BifrostObjStr* key = it.key;
 
-    if (key->hash == hash && key_len == name_len && bfVMString_ccmpn(key->value, name, name_len) == 0)
+    if (StringCmp_Cmp(str_cmp, StringCmp_FromBStr(key)))
     {
       return *(void**)it.value;
     }
@@ -1684,9 +1671,9 @@ uint32_t bfVM_getSymbol(BifrostVM* self, string_range name)
 
   for (uint32_t symbol_index = 0; symbol_index < num_symbols; ++symbol_index)
   {
-    const BifrostString* const symbol = self->symbols + symbol_index;
+    ConstBifrostString* const symbol = self->symbols + symbol_index;
 
-    if (bfVMString_length(*symbol) == name.str_len && bfVMString_ccmpn(*symbol, name.str_bgn, name.str_len) == 0)
+    if (StringCmp_Cmp(StringCmp_FromStr(*symbol), StringCmp_FromStrView(name)))
     {
       return symbol_index;
     }

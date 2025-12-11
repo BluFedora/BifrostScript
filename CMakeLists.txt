@@ -19,7 +19,7 @@ if (BIFROST_SCRIPT_SHARED_LIBRARY)
 else()
   add_library(BifrostScript STATIC)
 
-  target_compile_definitions(BifrostScript PRIVATE BF_VM_EXPORT_STATIC)
+  target_compile_definitions(BifrostScript PUBLIC BF_VM_EXPORT_STATIC)
 endif()
 
 if(MSVC)

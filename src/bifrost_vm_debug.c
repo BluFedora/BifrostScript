@@ -74,13 +74,13 @@ size_t bfDbg_ValueToString(BifrostValue value, char* buffer, size_t buffer_size)
       {
         return (size_t)snprintf(buffer, buffer_size, "<native function>");
       }
-      case BIFROST_VM_OBJ_REFERENCE:
+      case BIFROST_VM_OBJ_NATIVE_INSTANCE:
       {
         const BifrostObjReference* const obj_ref = (const BifrostObjReference*)obj;
 
         return (size_t)snprintf(buffer, buffer_size, "<obj reference class(%s)>", obj_ref->clz ? obj_ref->clz->name : "null");
       }
-      case BIFROST_VM_OBJ_WEAK_REF:
+      case BIFROST_VM_OBJ_NATIVE_WEAK_REF:
       {
         const BifrostObjWeakRef* const obj_weak_ref = (const BifrostObjWeakRef*)obj;
 
@@ -140,11 +140,11 @@ size_t bfDbg_ValueTypeToString(BifrostValue value, char* buffer, size_t buffer_s
       {
         return (size_t)snprintf(buffer, buffer_size, "<NativeFunction>");
       }
-      case BIFROST_VM_OBJ_REFERENCE:
+      case BIFROST_VM_OBJ_NATIVE_INSTANCE:
       {
         return (size_t)snprintf(buffer, buffer_size, "<Reference>");
       }
-      case BIFROST_VM_OBJ_WEAK_REF:
+      case BIFROST_VM_OBJ_NATIVE_WEAK_REF:
       {
         return (size_t)snprintf(buffer, buffer_size, "<Weak Ref>");
       }

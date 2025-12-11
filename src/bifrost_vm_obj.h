@@ -27,14 +27,14 @@ extern "C" {
 
 typedef enum BifrostObjType
 {
-  BIFROST_VM_OBJ_FUNCTION,   // 0b000
-  BIFROST_VM_OBJ_MODULE,     // 0b001
-  BIFROST_VM_OBJ_CLASS,      // 0b010
-  BIFROST_VM_OBJ_INSTANCE,   // 0b011
-  BIFROST_VM_OBJ_STRING,     // 0b100
-  BIFROST_VM_OBJ_NATIVE_FN,  // 0b101
-  BIFROST_VM_OBJ_REFERENCE,  // 0b110
-  BIFROST_VM_OBJ_WEAK_REF,   // 0b111
+  BIFROST_VM_OBJ_FUNCTION,         // 0b000
+  BIFROST_VM_OBJ_MODULE,           // 0b001
+  BIFROST_VM_OBJ_CLASS,            // 0b010
+  BIFROST_VM_OBJ_INSTANCE,         // 0b011
+  BIFROST_VM_OBJ_STRING,           // 0b100
+  BIFROST_VM_OBJ_NATIVE_FN,        // 0b101
+  BIFROST_VM_OBJ_NATIVE_INSTANCE,  // 0b110
+  BIFROST_VM_OBJ_NATIVE_WEAK_REF,  // 0b111
 
 } BifrostObjType;
 
@@ -62,7 +62,7 @@ typedef struct BifrostObjFn
   int32_t                  arity;  //!< An arity of -1 indicates variadic args [0, 512).
   uint16_t*                code_to_line;
   BifrostValue*            constants;
-  bfInstruction*           instructions;
+  const bfInstruction*     instructions;
   size_t                   needed_stack_space; /* params + locals + temps */
   struct BifrostObjModule* module;
 
@@ -106,7 +106,7 @@ typedef struct BifrostObjStr
 {
   BifrostObj    super;
   BifrostString value;
-  unsigned      hash;
+  uint32_t      hash;
 
 } BifrostObjStr;
 
@@ -139,10 +139,10 @@ typedef struct BifrostObjWeakRef
 
 typedef struct BifrostVMStackFrame
 {
-  BifrostObjFn*  fn;        /*!< Needed for addition debug info for stack traces, NULL for native functions. */
-  bfInstruction* ip;        /*!< The current instruction being executed.                                     */
-  size_t         old_stack; /*!< The top of the stack to restore to.                                         */
-  size_t         stack;     /*!< The place where this stacks locals start.                                   */
+  BifrostObjFn*        fn;        /*!< Needed for stack traces, NULL for native functions. */
+  const bfInstruction* ip;        /*!< The current instruction being executed.             */
+  size_t               old_stack; /*!< The top of the stack to restore to.                 */
+  size_t               stack;     /*!< The place where this stacks locals start.           */
 
 } BifrostVMStackFrame;
 
@@ -180,14 +180,23 @@ void   bfVMArray_delete(struct BifrostVM* vm, void* const self);
 
 /* string */
 
+typedef struct StringCmp
+{
+  const char* str;
+  uint32_t    length;
+  uint32_t    hash;
+
+} StringCmp;
+
+StringCmp     StringCmp_Make(const char* const str, const size_t length);
+StringCmp     StringCmp_FromStr(ConstBifrostString self);
+StringCmp     StringCmp_FromBStr(const BifrostObjStr* self);
+StringCmp     StringCmp_FromStrView(const string_range self);
+bool          StringCmp_Cmp(const StringCmp lhs, const StringCmp rhs);
 BifrostString bfVMString_newLen(struct BifrostVM* vm, const char* initial_data, size_t string_length);
 size_t        bfVMString_length(ConstBifrostString self);
 void          bfVMString_reserve(struct BifrostVM* vm, BifrostString* self, size_t new_capacity);
 void          bfVMString_sprintf(struct BifrostVM* vm, BifrostString* self, const char* format, ...);
-void          bfVMString_unescape(BifrostString self);
-int           bfVMString_cmp(ConstBifrostString self, ConstBifrostString other);
-int           bfVMString_ccmpn(ConstBifrostString self, const char* other, size_t length);
-uint32_t      bfVMString_hashN(const char* str, size_t length);
 void          bfVMString_delete(struct BifrostVM* vm, BifrostString self);
 
 /* hash-map */

@@ -15,6 +15,34 @@
 
 #include "bifrost_vm_gc.h"  // Allocation Functions
 
+typedef struct BifrostStringHeader
+{
+  size_t capacity;
+  size_t length;
+
+} BifrostStringHeader;
+
+BifrostStringHeader* bfVMString_getHeader(ConstBifrostString self)
+{
+  return ((BifrostStringHeader*)(self)) - 1;
+}
+
+static uint32_t bfVMString_hashN(const char* str, size_t length)
+{
+  uint32_t hash = 0x811c9dc5;
+
+  const char* str_end = str + length;
+
+  while (str != str_end)
+  {
+    hash ^= (unsigned char)*str;
+    hash *= 0x01000193;
+    ++str;
+  }
+
+  return hash;
+}
+
 inline static void SetupGCObject(BifrostObj* obj, BifrostObjType type, BifrostObj** next)
 {
   obj->type    = type;
@@ -116,6 +144,54 @@ BifrostObjNativeFn* bfObj_NewNativeFn(struct BifrostVM* self, bfNativeFnT fn_ptr
   return fn;
 }
 
+static unsigned char EscapeConvert(const unsigned char c)
+{
+  switch (c)
+  {
+    case 'a':  return '\a';
+    case 'b':  return '\b';
+    case 'f':  return '\f';
+    case 'n':  return '\n';
+    case 'r':  return '\r';
+    case 't':  return '\t';
+    case 'v':  return '\v';
+    case '\\': return '\\';
+    case '\'': return '\'';
+    case '\"': return '\"';
+    case '?':  return '\?';
+    default:   return c;
+  }
+}
+
+static size_t CString_unescape(char* str)
+{
+  const char* oldStr = str;
+  char*       newStr = str;
+
+  while (*oldStr)
+  {
+    unsigned char c = *(unsigned char*)(oldStr++);
+
+    if (c == '\\')
+    {
+      c = *(unsigned char*)(oldStr++);
+      if (c == '\0') break;
+      c = EscapeConvert(c);
+    }
+
+    *newStr++ = (char)c;
+  }
+
+  *newStr = '\0';
+
+  return (newStr - str);
+}
+
+static void bfVMString_unescape(BifrostString self)
+{
+  bfVMString_getHeader(self)->length = CString_unescape(self);
+}
+
 BifrostObjStr* bfObj_NewString(struct BifrostVM* self, string_range value)
 {
   BifrostObjStr* obj = AllocateVMObject(BifrostObjStr, self, BIFROST_VM_OBJ_STRING);
@@ -129,7 +205,7 @@ BifrostObjStr* bfObj_NewString(struct BifrostVM* self, string_range value)
 
 BifrostObjReference* bfObj_NewReference(struct BifrostVM* self, size_t extra_data_size)
 {
-  BifrostObjReference* obj = AllocateVMObjectEx(BifrostObjReference, self, BIFROST_VM_OBJ_REFERENCE, extra_data_size);
+  BifrostObjReference* obj = AllocateVMObjectEx(BifrostObjReference, self, BIFROST_VM_OBJ_NATIVE_INSTANCE, extra_data_size);
 
   obj->clz             = NULL;
   obj->extra_data_size = extra_data_size;
@@ -140,7 +216,7 @@ BifrostObjReference* bfObj_NewReference(struct BifrostVM* self, size_t extra_dat
 
 BifrostObjWeakRef* bfObj_NewWeaKRef(struct BifrostVM* self, void* data)
 {
-  BifrostObjWeakRef* obj = AllocateVMObject(BifrostObjWeakRef, self, BIFROST_VM_OBJ_WEAK_REF);
+  BifrostObjWeakRef* obj = AllocateVMObject(BifrostObjWeakRef, self, BIFROST_VM_OBJ_NATIVE_WEAK_REF);
 
   obj->clz  = NULL;
   obj->data = data;
@@ -176,11 +252,11 @@ size_t bfObj_AllocationSize(const BifrostObj* obj)
     {
       return sizeof(BifrostObjStr);
     }
-    case BIFROST_VM_OBJ_REFERENCE:
+    case BIFROST_VM_OBJ_NATIVE_INSTANCE:
     {
       return sizeof(BifrostObjReference) + ((const BifrostObjReference*)obj)->extra_data_size;
     }
-    case BIFROST_VM_OBJ_WEAK_REF:
+    case BIFROST_VM_OBJ_NATIVE_WEAK_REF:
     {
       return sizeof(BifrostObjWeakRef);
     }
@@ -231,24 +307,15 @@ void bfObj_Destruct(struct BifrostVM* self, BifrostObj* obj)
       bfVMArray_delete(self, &fn->code_to_line);
       break;
     }
-    case BIFROST_VM_OBJ_NATIVE_FN:
-    {
-      break;
-    }
     case BIFROST_VM_OBJ_STRING:
     {
       BifrostObjStr* const str = (BifrostObjStr*)obj;
       bfVMString_delete(self, str->value);
       break;
     }
-    case BIFROST_VM_OBJ_REFERENCE:
-    {
-      break;
-    }
-    case BIFROST_VM_OBJ_WEAK_REF:
-    {
-      break;
-    }
+    case BIFROST_VM_OBJ_NATIVE_FN:
+    case BIFROST_VM_OBJ_NATIVE_INSTANCE:
+    case BIFROST_VM_OBJ_NATIVE_WEAK_REF:
     default:
     {
       break;
@@ -284,7 +351,7 @@ void bfObj_Finalize(struct BifrostVM* self, BifrostObj* obj)
       inst->clz->finalizer(self, &inst->extra_data);
     }
   }
-  else if (obj->type == BIFROST_VM_OBJ_REFERENCE)
+  else if (obj->type == BIFROST_VM_OBJ_NATIVE_INSTANCE)
   {
     BifrostObjReference* ref = (BifrostObjReference*)obj;
 
@@ -451,12 +518,19 @@ void bfVMArray_delete(struct BifrostVM* vm, void* const self)
 
 /* string */
 
-typedef struct BifrostStringHeader
+StringCmp StringCmp_Make(const char* const str, const size_t length)
 {
-  size_t capacity;
-  size_t length;
+  return (StringCmp){.str = str, .length = (uint32_t)length, .hash = bfVMString_hashN(str, length)};
+}
 
-} BifrostStringHeader;
+StringCmp StringCmp_FromStr(ConstBifrostString self) { return StringCmp_Make(self, bfVMString_length(self)); }
+StringCmp StringCmp_FromBStr(const BifrostObjStr* self) { return StringCmp_FromStr(self->value); }
+StringCmp StringCmp_FromStrView(const string_range self) { return StringCmp_Make(self.str_bgn, self.str_len); }
+
+bool StringCmp_Cmp(const StringCmp lhs, const StringCmp rhs)
+{
+  return lhs.hash == rhs.hash && lhs.length == rhs.length && LibC_strncmp(lhs.str, rhs.str, lhs.length) == 0;
+}
 
 BifrostStringHeader* bfVMString_getHeader(ConstBifrostString self);
 
@@ -532,93 +606,6 @@ void bfVMString_reserve(struct BifrostVM* vm, BifrostString* self, size_t new_ca
   }
 }
 
-static unsigned char EscapeConvert(const unsigned char c)
-{
-  switch (c)
-  {
-    case 'a':  return '\a';
-    case 'b':  return '\b';
-    case 'f':  return '\f';
-    case 'n':  return '\n';
-    case 'r':  return '\r';
-    case 't':  return '\t';
-    case 'v':  return '\v';
-    case '\\': return '\\';
-    case '\'': return '\'';
-    case '\"': return '\"';
-    case '?':  return '\?';
-    default:   return c;
-  }
-}
-
-static size_t CString_unescape(char* str)
-{
-  const char* oldStr = str;
-  char*       newStr = str;
-
-  while (*oldStr)
-  {
-    unsigned char c = *(unsigned char*)(oldStr++);
-
-    if (c == '\\')
-    {
-      c = *(unsigned char*)(oldStr++);
-      if (c == '\0') break;
-      c = EscapeConvert(c);
-    }
-
-    *newStr++ = (char)c;
-  }
-
-  *newStr = '\0';
-
-  return (newStr - str);
-}
-
-void bfVMString_unescape(BifrostString self)
-{
-  bfVMString_getHeader(self)->length = CString_unescape(self);
-}
-
-int bfVMString_cmp(ConstBifrostString self, ConstBifrostString other)
-{
-  const size_t len1 = bfVMString_length(self);
-  const size_t len2 = bfVMString_length(other);
-
-  if (len1 != len2)
-  {
-    return -1;
-  }
-
-  return LibC_strncmp(self, other, len1);
-}
-
-int bfVMString_ccmpn(ConstBifrostString self, const char* other, size_t length)
-{
-  if (length > bfVMString_length(self))
-  {
-    return -1;
-  }
-
-  return LibC_strncmp(self, other, length);
-}
-
-uint32_t bfVMString_hashN(const char* str, size_t length)
-{
-  uint32_t hash = 0x811c9dc5;
-
-  const char* str_end = str + length;
-
-  while (str != str_end)
-  {
-    hash ^= (unsigned char)*str;
-    hash *= 0x01000193;
-    ++str;
-  }
-
-  return hash;
-}
-
 void bfVMString_delete(struct BifrostVM* vm, BifrostString self)
 {
   vm->gc_is_running = true;
@@ -628,9 +615,4 @@ void bfVMString_delete(struct BifrostVM* vm, BifrostString self)
   bfGC_AllocMemory(vm, header, StringAllocationSize(header->capacity), 0u);
 
   vm->gc_is_running = false;
-}
-
-BifrostStringHeader* bfVMString_getHeader(ConstBifrostString self)
-{
-  return ((BifrostStringHeader*)(self)) - 1;
 }

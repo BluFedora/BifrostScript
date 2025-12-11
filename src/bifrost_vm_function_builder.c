@@ -72,13 +72,16 @@ inline static bool bfFuncBuilder__getVariable(const BifrostVMFunctionBuilder* se
   const int* count = (const int*)bfVMArray_back(&self->local_var_scope_size);
   const int  end   = in_current_scope ? *count : (int)bfVMArray_size(&self->local_vars);
 
+  const StringCmp name_cmp = StringCmp_Make(name, (uint32_t)length);
+
   for (int i = end - 1; i >= 0; --i)
   {
-    const string_range* const var = self->local_vars + i;
+    const string_range* const var     = self->local_vars + i;
+    const StringCmp           var_cmp = StringCmp_FromStrView(*var);
 
     LibC_assert((int)bfVMArray_size(&self->local_vars) > i, "Invalid indexing.");
 
-    if (length == var->str_len && bfVMString_ccmpn(name, var->str_bgn, length) == 0)
+    if (StringCmp_Cmp(name_cmp, var_cmp))
     {
       *out_index = (uint16_t)i;
       return true;
