@@ -770,7 +770,7 @@ static void parseImport(BifrostParser* const self)
       // TODO(SR): The way symbols are stored is dumb and leaves lots of empty slots.
       if (!bfVMValue_isNull(module_symbol->value))
       {
-        const string_range variable_name = MakeStringLen(module_symbol->name, bfVMString_length(module_symbol->name));
+        const string_range variable_name = BifrostString_AsStrRng(module_symbol->name);
 
         bfVM_xSetVariable(&self->current_module->variables, self->vm, variable_name, module_symbol->value);
       }

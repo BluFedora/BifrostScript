@@ -42,8 +42,8 @@ typedef enum BifrostObjType
 
 typedef struct BifrostVMSymbol
 {
-  ConstBifrostString name;  /*!< Non owning string, [BifrostVM::symbols] is the owner. */
-  BifrostValue       value; /*!< The associated value.                                 */
+  const BifrostObjStr* name;  /*!< [BifrostVM::symbols] is the owner. */
+  BifrostValue         value; /*!< The associated value.              */
 
 } BifrostVMSymbol;
 
@@ -106,6 +106,9 @@ typedef struct BifrostObjStr
 {
   BifrostObj    super;
   BifrostString value;
+  //char*         str;
+  //uint32_t      capacity;
+  //uint32_t      length;
   uint32_t      hash;
 
 } BifrostObjStr;
@@ -188,16 +191,29 @@ typedef struct StringCmp
 
 } StringCmp;
 
-StringCmp     StringCmp_Make(const char* const str, const size_t length);
-StringCmp     StringCmp_FromStr(ConstBifrostString self);
-StringCmp     StringCmp_FromBStr(const BifrostObjStr* self);
-StringCmp     StringCmp_FromStrView(const string_range self);
-bool          StringCmp_Cmp(const StringCmp lhs, const StringCmp rhs);
+StringCmp StringCmp_Make(const char* const str, const size_t length);
+StringCmp StringCmp_FromStr(ConstBifrostString self);
+StringCmp StringCmp_FromBStr(const BifrostObjStr* self);
+StringCmp StringCmp_FromStrView(const string_range self);
+bool      StringCmp_Cmp(const StringCmp lhs, const StringCmp rhs);
+
 BifrostString bfVMString_newLen(struct BifrostVM* vm, const char* initial_data, size_t string_length);
 size_t        bfVMString_length(ConstBifrostString self);
 void          bfVMString_reserve(struct BifrostVM* vm, BifrostString* self, size_t new_capacity);
 void          bfVMString_sprintf(struct BifrostVM* vm, BifrostString* self, const char* format, ...);
 void          bfVMString_delete(struct BifrostVM* vm, BifrostString self);
+
+
+
+inline size_t BifrostString_length(const BifrostObjStr* self)
+{
+  return bfVMString_length(self->value);
+}
+
+inline string_range BifrostString_AsStrRng(const BifrostObjStr* self)
+{
+  return MakeStringLen(self->value, BifrostString_length(self));
+}
 
 /* hash-map */
 
@@ -211,22 +227,13 @@ typedef struct bfHashMapIter
 } bfHashMapIter;
 
 /*
-    The defaults are the following.
-
-    hash       - Assumes the keys are nul terminated strings. So if you use a
-                  different data-type you MUST pass in a valid hash function.
-
-    cmp        - Like [hash] assumes a nul terminated string and will compare each
-                  character. So if you use a different data-type you MUST pass in a
-                  valid compare function.
-
-    value_size - By default is the size of a pointer.
-  */
+  value_size - By default is the size of a pointer.
+*/
 void bfHashMapParams_init(BifrostHashMapParams* self, struct BifrostVM* vm);
 
 void          bfHashMap_ctor(BifrostHashMap* self, const BifrostHashMapParams* params);
-void          bfHashMap_set(BifrostHashMap* self, const void* key, void* value);
-void*         bfHashMap_get(BifrostHashMap* self, const void* key);
+void          bfHashMap_set(BifrostHashMap* self, const BifrostObjStr* key, void* value);
+void*         bfHashMap_get(BifrostHashMap* self, const BifrostObjStr* key);
 int           bfHashMap_removeCmp(BifrostHashMap* self, const void* key, bfHashMapCmp cmp);  // 'key' is the first param for 'cmp'
 bfHashMapIter bfHashMap_itBegin(const BifrostHashMap* self);
 int           bfHashMap_itIsValid(const bfHashMapIter* it);

@@ -48,12 +48,28 @@ static void   bfGCMarkObj(BifrostObj* obj, uint8_t mark_value);
 static void   bfGCMarkSymbols(BifrostVMSymbol* symbols, uint8_t mark_value);
 static void   bfGCFinalize(BifrostVM* self);
 
-extern BifrostValue     bfVM_getHandleValue(bfValueHandle h);
+extern BifrostValue  bfVM_getHandleValue(bfValueHandle h);
 extern bfValueHandle bfVM_getHandleNext(bfValueHandle h);
 extern uint32_t      bfVM_getSymbol(BifrostVM* self, string_range name);
 
 static void bfGCMarkObjects(struct BifrostVM* self)
 {
+  // Symbols
+  {
+    const size_t symbols_size = bfVMArray_size(&self->symbols);
+
+    for (size_t i = 0; i < symbols_size; ++i)
+    {
+      BifrostObjStr* const symbol = self->symbols[i];
+
+      bfGCMarkObj(&symbol->super, GC_MARK_REACHABLE);
+    }
+  }
+  // last_error
+  {
+    bfGCMarkObj(&self->last_error->super, GC_MARK_REACHABLE);
+  }
+
   const size_t stack_size = bfVMArray_size(&self->stack);
 
   for (size_t i = 0; i < stack_size; ++i)
@@ -467,7 +483,7 @@ static void bfGCFinalize(BifrostVM* self)
   while (cursor)
   {
     BifrostObjClass* const clz   = cursor->clz;
-    const BifrostValue        value = clz->symbols[dtor_symbol].value;
+    const BifrostValue     value = clz->symbols[dtor_symbol].value;
 
     // TODO(SR):
     //   Investigate if this breaks some reentrancy model rules.

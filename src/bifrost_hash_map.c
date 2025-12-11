@@ -12,9 +12,9 @@
 
 struct bfHashNode
 {
-  const void* key;
-  bfHashNode* next;
-  char        value[bf_flex_array_member];
+  const BifrostObjStr* key;
+  bfHashNode*          next;
+  char                 value[bf_flex_array_member];
 };
 
 static bfHashNode* bfHashMap_newNode(struct BifrostVM* vm, const void* key, size_t value_size, void* value, bfHashNode* next)
@@ -32,13 +32,24 @@ static bfHashNode* bfHashMap_newNode(struct BifrostVM* vm, const void* key, size
   return node;
 }
 
-static bfHashNode* bfHashMap_getNode(const BifrostHashMap* self, const void* key, unsigned hash)
+static unsigned bfHashMap_defaultHash(const void* key)
+{
+  const BifrostObjStr* str = (const BifrostObjStr*)key;
+  return str->hash;
+}
+
+static int bfHashMap_defaultCmp(const BifrostObjStr* const lhs, const BifrostObjStr* const rhs)
+{
+  return StringCmp_Cmp(StringCmp_FromBStr(lhs), StringCmp_FromBStr(rhs));
+}
+
+static bfHashNode* bfHashMap_getNode(const BifrostHashMap* self, const BifrostObjStr* key, unsigned hash)
 {
   bfHashNode* cursor = self->buckets[hash];
 
   while (cursor)
   {
-    if (self->params.cmp(key, cursor->key))
+    if (bfHashMap_defaultCmp(key, cursor->key))
     {
       break;
     }
@@ -54,33 +65,9 @@ static void bfHashMap_deleteNode(const BifrostHashMap* self, bfHashNode* node)
   bfGC_AllocMemory(self->params.vm, node, sizeof(bfHashNode) + self->params.value_size, 0u);
 }
 
-static unsigned bfHashMap_defaultHash(const void* key)
-{
-  const char* cp   = (const char*)key;
-  unsigned    hash = 0x811c9dc5;
-
-  while (*cp)
-  {
-    hash ^= (unsigned char)*cp++;
-    hash *= 0x01000193;
-  }
-
-  return hash;
-}
-
-static int bfHashMap_defaultCmp(const void* lhs, const void* rhs)
-{
-  const char* str1 = (const char*)lhs;
-  const char* str2 = (const char*)rhs;
-
-  return LibC_strcmp(str1, str2) == 0;
-}
-
 void bfHashMapParams_init(BifrostHashMapParams* self, struct BifrostVM* vm)
 {
   self->vm         = vm;
-  self->hash       = bfHashMap_defaultHash;
-  self->cmp        = bfHashMap_defaultCmp;
   self->value_size = sizeof(void*);
 }
 
@@ -95,9 +82,9 @@ void bfHashMap_ctor(BifrostHashMap* self, const BifrostHashMapParams* params)
   }
 }
 
-void bfHashMap_set(BifrostHashMap* self, const void* key, void* value)
+void bfHashMap_set(BifrostHashMap* self, const BifrostObjStr* key, void* value)
 {
-  const unsigned hash = self->params.hash(key) % self->num_buckets;
+  const unsigned hash = bfHashMap_defaultHash(key) % self->num_buckets;
   bfHashNode*    node = bfHashMap_getNode(self, key, hash);
 
   if (node)
@@ -113,26 +100,21 @@ void bfHashMap_set(BifrostHashMap* self, const void* key, void* value)
 
 static int bfHashMap_has(const BifrostHashMap* self, const void* key)
 {
-  const unsigned hash = self->params.hash(key) % self->num_buckets;
+  const unsigned hash = bfHashMap_defaultHash(key) % self->num_buckets;
   return bfHashMap_getNode(self, key, hash) != NULL;
 }
 
-void* bfHashMap_get(BifrostHashMap* self, const void* key)
+void* bfHashMap_get(BifrostHashMap* self, const BifrostObjStr* key)
 {
-  const unsigned hash = self->params.hash(key) % self->num_buckets;
+  const unsigned hash = bfHashMap_defaultHash(key) % self->num_buckets;
   bfHashNode*    node = bfHashMap_getNode(self, key, hash);
 
   return node ? node->value : NULL;
 }
 
-static int bfHashMap_remove(BifrostHashMap* self, const void* key)
-{
-  return bfHashMap_removeCmp(self, key, self->params.cmp);
-}
-
 int bfHashMap_removeCmp(BifrostHashMap* self, const void* key, bfHashMapCmp cmp)
 {
-  const unsigned hash   = self->params.hash(key) % self->num_buckets;
+  const unsigned hash   = bfHashMap_defaultHash(key) % self->num_buckets;
   bfHashNode*    cursor = self->buckets[hash];
   bfHashNode*    prev   = NULL;
 

@@ -81,19 +81,6 @@ static inline void bfVM_assertStackIndex(const BifrostVM* const self, const size
   LibC_assert(idx < size, "Invalid index passed into bfVM_stack* function.");
 }
 
-static unsigned ModuleMap_hash(const void* key)
-{
-  return ((const BifrostObjStr*)key)->hash;
-}
-
-static int ModuleMap_cmp(const void* lhs, const void* rhs)
-{
-  const BifrostObjStr* str_lhs = (const BifrostObjStr*)lhs;
-  const BifrostObjStr* str_rhs = (const BifrostObjStr*)rhs;
-
-  return StringCmp_Cmp(StringCmp_FromBStr(str_lhs), StringCmp_FromBStr(str_rhs));
-}
-
 void bfVM_ctor(BifrostVM* self, const BifrostVMParams* params)
 {
   LibC_memset(self, 0x0, sizeof(*self));
@@ -105,7 +92,7 @@ void bfVM_ctor(BifrostVM* self, const BifrostVMParams* params)
   self->stack_top         = self->stack;
   self->symbols           = bfVMArray_new(self, self->symbols, 10);
   self->gc_object_list    = NULL;
-  self->last_error        = bfVMString_newLen(self, "", 0);
+  self->last_error        = bfObj_NewString(self, MakeString(""));
   self->bytes_allocated   = 0u;
   self->handles           = NULL;
   self->free_handles      = NULL;
@@ -114,15 +101,8 @@ void bfVM_ctor(BifrostVM* self, const BifrostVMParams* params)
   self->finalized         = NULL;
   self->current_native_fn = NULL;
 
-  /*
-    NOTE(Shareef):
-      Custom dtor are not needed as the strings being
-      stored in the map will be garbage collected.
-  */
   BifrostHashMapParams hash_params;
   bfHashMapParams_init(&hash_params, self);
-  hash_params.hash       = ModuleMap_hash;
-  hash_params.cmp        = ModuleMap_cmp;
   hash_params.value_size = sizeof(BifrostObjModule*);
   bfHashMap_ctor(&self->modules, &hash_params);
 
@@ -238,12 +218,11 @@ BifrostVMError bfVM_moduleLoad(BifrostVM* self, size_t idx, const char* module, 
   return BIFROST_VM_ERROR_MODULE_NOT_FOUND;
 }
 
-static int bfVM_moduleUnloadCmp(const void* lhs, const void* rhs)
+static int bfVM_moduleUnloadCmp(const void* lhs, const BifrostObjStr* rhs)
 {
-  const StringCmp*     str_lhs = (const StringCmp*)lhs;
-  const BifrostObjStr* str_rhs = (const BifrostObjStr*)rhs;
+  const StringCmp* const str_lhs = (const StringCmp*)lhs;
 
-  return StringCmp_Cmp(*str_lhs, StringCmp_FromBStr(str_rhs));
+  return StringCmp_Cmp(*str_lhs, StringCmp_FromBStr(rhs));
 }
 
 void bfVM_moduleUnload(BifrostVM* self, const char* module, const size_t module_name_len)
@@ -290,6 +269,8 @@ BifrostValue bfVM_stackFindVariable(BifrostObjModule* module_obj, const char* va
 
   const size_t num_vars = bfVMArray_size(&module_obj->variables);
 
+  const StringCmp variable_cmp = StringCmp_Make(variable, variable_len);
+
   for (size_t i = 0; i < num_vars; ++i)
   {
     BifrostVMSymbol* const var = module_obj->variables + i;
@@ -299,7 +280,7 @@ BifrostValue bfVM_stackFindVariable(BifrostObjModule* module_obj, const char* va
       continue;
     }
 
-    if (bfVMString_length(var->name) == variable_len && LibC_strncmp(variable, var->name, variable_len) == 0)
+    if (StringCmp_Cmp(StringCmp_FromBStr(var->name), variable_cmp))
     {
       return var->value;
     }
@@ -550,9 +531,9 @@ static int bfVM__stackStoreVariable(BifrostVM* self, BifrostValue obj, string_ra
     return 1;
   }
 
-  BifrostObj*         obj_ptr = bfVMValue_asPointer(obj);
-  const size_t        symbol  = bfVM_getSymbol(self, field_symbol);
-  const BifrostString sym_str = self->symbols[symbol];
+  BifrostObj*                obj_ptr = bfVMValue_asPointer(obj);
+  const size_t               symbol  = bfVM_getSymbol(self, field_symbol);
+  const BifrostObjStr* const sym_str = self->symbols[symbol];
 
   if (obj_ptr->type == BIFROST_VM_OBJ_INSTANCE)
   {
@@ -1028,7 +1009,7 @@ static void bfVM_popAllCallFrames(BifrostVM* self, const BifrostVMStackFrame* re
   if (error_fn)
   {
     error_fn(self, BIFROST_VM_ERROR_STACK_TRACE_BEGIN, -1, "");
-    error_fn(self, BIFROST_VM_ERROR_STACK_TRACE, -1, self->last_error);
+    error_fn(self, BIFROST_VM_ERROR_STACK_TRACE, -1, self->last_error->value);
 
     for (size_t i = num_frames; i < total_frames; ++i)
     {
@@ -1037,9 +1018,9 @@ static void bfVM_popAllCallFrames(BifrostVM* self, const BifrostVMStackFrame* re
       const int                  line_num = fn ? fn->code_to_line[frame->ip - fn->instructions] : -1;
       const char* const          fn_name  = fn ? fn->name : "<native>";
 
-      bfVMString_sprintf(self, &self->last_error, "%*.s[%zu] Stack Frame Line(%u): %s\n", (int)i * 3, "", i, (unsigned)line_num, fn_name);
+      bfVMString_sprintf(self, &self->last_error->value, "%*.s[%zu] Stack Frame Line(%u): %s\n", (int)i * 3, "", i, (unsigned)line_num, fn_name);
 
-      error_fn(self, BIFROST_VM_ERROR_STACK_TRACE, line_num, self->last_error);
+      error_fn(self, BIFROST_VM_ERROR_STACK_TRACE, line_num, self->last_error->value);
     }
 
     error_fn(self, BIFROST_VM_ERROR_STACK_TRACE_END, -1, "");
@@ -1062,8 +1043,8 @@ static BifrostVMError bfVM_execTopFrame(BifrostVM* self, BifrostObjFn* fn_to_run
   const BifrostVMStackFrame* const reference_frame = bfVMArray_back(&self->frames);
   BifrostVMError                   err             = BIFROST_VM_ERROR_NONE;
 
-#define BF_RUNTIME_ERROR(...)                               \
-  bfVMString_sprintf(self, &self->last_error, __VA_ARGS__); \
+#define BF_RUNTIME_ERROR(...)                                      \
+  bfVMString_sprintf(self, &self->last_error->value, __VA_ARGS__); \
   goto runtime_error
 
 /*
@@ -1097,15 +1078,15 @@ frame_start:;
       }
       case BIFROST_VM_OP_LOAD_SYMBOL:
       {
-        const BifrostValue  obj_value  = locals[regs[REG_RB]];
-        const uint32_t      symbol     = regs[REG_RC];
-        const BifrostString symbol_str = self->symbols[symbol];
+        const BifrostValue         obj_value  = locals[regs[REG_RB]];
+        const uint32_t             symbol     = regs[REG_RC];
+        const BifrostObjStr* const symbol_str = self->symbols[symbol];
 
         if (!bfVMValue_isPointer(obj_value))
         {
           char error_buffer[512];
           bfDbg_ValueToString(obj_value, error_buffer, sizeof(error_buffer));
-          BF_RUNTIME_ERROR("Cannot load symbol (%s) from non object %s\n", symbol_str, error_buffer);
+          BF_RUNTIME_ERROR("Cannot load symbol (%s) from non object %s\n", symbol_str->value, error_buffer);
         }
 
         BifrostObj* obj = bfVMValue_asPointer(obj_value);
@@ -1155,25 +1136,25 @@ frame_start:;
 
           if (!found_field)
           {
-            BF_RUNTIME_ERROR("'%s::%s' is not defined (also not found in any base class).\n", original_clz->name, self->symbols[symbol]);
+            BF_RUNTIME_ERROR("'%s::%s' is not defined (also not found in any base class).\n", original_clz->name, self->symbols[symbol]->value);
           }
         }
         else if (obj->type == BIFROST_VM_OBJ_MODULE)
         {
           BifrostObjModule* module = (BifrostObjModule*)obj;
 
-          locals[regs[REG_RA]] = bfVM_stackFindVariable(module, symbol_str, bfVMString_length(symbol_str));
+          locals[regs[REG_RA]] = bfVM_stackFindVariable(module, symbol_str->value, BifrostString_length(symbol_str));
         }
         else
         {
-          BF_RUNTIME_ERROR("(%u) ERROR, loading a symbol (%s) on a non instance obj.\n", obj->type, self->symbols[symbol]);
+          BF_RUNTIME_ERROR("(%u) ERROR, loading a symbol (%s) on a non instance obj.\n", obj->type, self->symbols[symbol]->value);
         }
         break;
       }
       case BIFROST_VM_OP_STORE_SYMBOL:
       {
-        const BifrostString sym_str   = self->symbols[regs[REG_RB]];
-        const int           err_store = bfVM__stackStoreVariable(self, locals[regs[REG_RA]], (string_range){sym_str, bfVMString_length(sym_str)}, locals[regs[REG_RC]]);
+        const BifrostObjStr* const sym_str   = self->symbols[regs[REG_RB]];
+        const int                  err_store = bfVM__stackStoreVariable(self, locals[regs[REG_RA]], BifrostString_AsStrRng(sym_str), locals[regs[REG_RC]]);
 
         if (err_store)
         {
@@ -1593,7 +1574,7 @@ const char* bfVM_buildInSymbolStr(const BifrostVM* self, BifrostVMBuildInSymbol 
 
 ConstBifrostString bfVM_errorString(const BifrostVM* self)
 {
-  return self->last_error;
+  return self->last_error->value;
 }
 
 void bfVM_dtor(BifrostVM* self)
@@ -1625,14 +1606,14 @@ void bfVM_dtor(BifrostVM* self)
 
   for (size_t i = 0; i < num_symbols; ++i)
   {
-    bfVMString_delete(self, self->symbols[i]);
+    bfObj_Delete(self, &self->symbols[i]->super);
   }
 
   bfVMArray_delete(self, &self->symbols);
   bfVMArray_delete(self, &self->frames);
   bfVMArray_delete(self, &self->stack);
   bfHashMap_dtor(&self->modules);
-  bfVMString_delete(self, self->last_error);
+  bfObj_Delete(self, &self->last_error->super);
 
   while (self->free_handles)
   {
@@ -1671,16 +1652,16 @@ uint32_t bfVM_getSymbol(BifrostVM* self, string_range name)
 
   for (uint32_t symbol_index = 0; symbol_index < num_symbols; ++symbol_index)
   {
-    ConstBifrostString* const symbol = self->symbols + symbol_index;
+    const BifrostObjStr* const symbol = self->symbols[symbol_index];
 
-    if (StringCmp_Cmp(StringCmp_FromStr(*symbol), StringCmp_FromStrView(name)))
+    if (StringCmp_Cmp(StringCmp_FromBStr(symbol), StringCmp_FromStrView(name)))
     {
       return symbol_index;
     }
   }
 
-  BifrostString* sym = bfVMArray_emplace(self, &self->symbols);
-  *sym               = bfVMString_newLen(self, name.str_bgn, name.str_len);
+  BifrostObjStr** const sym = bfVMArray_emplace(self, &self->symbols);
+  *sym                      = bfObj_NewString(self, name);
 
   return num_symbols;
 }
@@ -1756,7 +1737,7 @@ BifrostObjModule* bfVM_importModule(BifrostVM* self, const char* from, const cha
       }
       else
       {
-        bfVMString_sprintf(self, &self->last_error, "Failed to find module '%.*s'", name_len, name);
+        bfVMString_sprintf(self, &self->last_error->value, "Failed to find module '%.*s'", name_len, name);
       }
 
       // module_name
@@ -1764,7 +1745,7 @@ BifrostObjModule* bfVM_importModule(BifrostVM* self, const char* from, const cha
     }
     else
     {
-      bfVMString_sprintf(self, &self->last_error, "No module function registered when loading module '%.*s'", name_len, name);
+      bfVMString_sprintf(self, &self->last_error->value, "No module function registered when loading module '%.*s'", name_len, name);
     }
   }
 

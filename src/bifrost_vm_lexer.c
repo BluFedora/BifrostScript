@@ -11,6 +11,7 @@
 #include "bifrost_vm_lexer.h"
 
 #include "bifrost/bifrost_vm.h"  // bfVM_SetLastError
+#include "bifrost_vm_obj.h"      // bfVM_SetLastError
 
 static const char BTS_COMMENT_CHARACTER = '/';
 

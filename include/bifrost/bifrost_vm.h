@@ -58,8 +58,8 @@ typedef struct BifrostObjNativeFn  BifrostObjNativeFn;
 typedef struct BifrostVM           BifrostVM;
 typedef struct bfValueHandleImpl*  bfValueHandle; /*!< An opaque handle to a VM Value to keep it alive from the GC. */
 typedef struct BifrostGCRoot       BifrostGCRoot;
-
-typedef uint64_t BifrostValue; /*!< The Nan-Tagged value representation of this scripting language. */
+typedef struct BifrostObjStr       BifrostObjStr;
+typedef uint64_t                   BifrostValue; /*!< The Nan-Tagged value representation of this scripting language. */
 
 #define InvalidDefaultCase \
   default: break;
@@ -257,15 +257,13 @@ typedef enum BifrostVMBuildInSymbol
 #define BIFROST_HASH_MAP_BUCKET_SIZE 128
 
 typedef unsigned (*bfHashMapHash)(const void* key);
-typedef int (*bfHashMapCmp)(const void* lhs, const void* rhs);
+typedef int (*bfHashMapCmp)(const void* lhs, const BifrostObjStr* rhs);
 
 typedef struct bfHashNode bfHashNode;
 
 typedef struct BifrostHashMapParams
 {
   struct BifrostVM* vm;
-  bfHashMapHash     hash;
-  bfHashMapCmp      cmp;
   size_t            value_size;
 
 } BifrostHashMapParams;
@@ -291,13 +289,13 @@ struct BifrostVM
   BifrostVMStackFrame* frames;                                  /*!< The call stack.                                                                */
   BifrostValue*        stack;                                   /*!< The base pointer to the stack memory.                                          */
   BifrostValue*        stack_top;                               /*!< The usable top of the [BifrostVM::stack].                                      */
-  BifrostString*       symbols;                                 /*!< Every symbol ever used in the vm, a 'perfect hash'.                            */
+  BifrostObjStr**      symbols;                                 /*!< Every symbol ever used in the vm, a 'perfect hash'.                            */
   BifrostObj*          gc_object_list;                          /*!< The list of every object allocated by this VM.                                 */
   BifrostHashMap       modules;                                 /*!< <BifrostObjStr, BifrostObjModule*> for fast module lookup                      */
   BifrostParser*       parser_stack;                            /*!< For handling the recursive nature of importing modules.                        */
   bfValueHandle        handles;                                 /*!< Additional GC Roots for Extended C Lifetimes                                   */
   bfValueHandle        free_handles;                            /*!< A pool of handles for reduced allocations.                                     */
-  BifrostString        last_error;                              /*!< The last error to happen in a user readable way                                */
+  BifrostObjStr*       last_error;                              /*!< The last error to happen in a user readable way                                */
   size_t               bytes_allocated;                         /*!< The total amount of memory this VM has asked for                               */
   BifrostObj*          finalized;                               /*!< Objects that have finalized but still need to be freed                         */
   BifrostGCRoot*       gc_roots;                                /*!< Objects temporarily protected from the GC                                      */
@@ -1097,11 +1095,11 @@ BF_VM_API void bfVM_dtor(BifrostVM* self);
  * @brief
  *   Sets last error message + calls the error callback.
  */
-#define bfVM_SetLastError(error_type, vm, line_no, fmt, ...)              \
-  bfVMString_sprintf(vm, &vm->last_error, (fmt), ##__VA_ARGS__);          \
-  if ((vm)->params.error_fn != NULL)                                      \
-  {                                                                       \
-    (vm)->params.error_fn((vm), error_type, (line_no), (vm)->last_error); \
+#define bfVM_SetLastError(error_type, vm, line_no, fmt, ...)                     \
+  bfVMString_sprintf(vm, &vm->last_error->value, (fmt), ##__VA_ARGS__);          \
+  if ((vm)->params.error_fn != NULL)                                             \
+  {                                                                              \
+    (vm)->params.error_fn((vm), error_type, (line_no), (vm)->last_error->value); \
   }
 
 #if __cplusplus
