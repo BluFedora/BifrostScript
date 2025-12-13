@@ -191,7 +191,7 @@ void bfFuncBuilder_end(BifrostVMFunctionBuilder* self, BifrostObjFn* out, int ar
   bfFuncBuilder_popScope(self);
 
   out->super.type         = BIFROST_VM_OBJ_FUNCTION;
-  out->name               = bfVMString_newLen(self->vm, self->name, self->name_len);
+  out->name               = bfObj_NewString(self->vm, MakeStringLen(self->name, self->name_len));
   out->arity              = arity;
   out->code_to_line       = self->code_to_line;
   out->constants          = self->constants;

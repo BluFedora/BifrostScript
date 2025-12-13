@@ -48,7 +48,7 @@ size_t bfDbg_ValueToString(BifrostValue value, char* buffer, size_t buffer_size)
       {
         const BifrostObjFn* const obj_fn = (const BifrostObjFn*)obj;
 
-        return (size_t)snprintf(buffer, buffer_size, "<fn %s>", obj_fn->name);
+        return (size_t)snprintf(buffer, buffer_size, "<fn %s>", obj_fn->name->value);
       }
       case BIFROST_VM_OBJ_MODULE:
       {
@@ -116,7 +116,7 @@ size_t bfDbg_ValueTypeToString(BifrostValue value, char* buffer, size_t buffer_s
       {
         const BifrostObjFn* const obj_fn = (const BifrostObjFn*)obj;
 
-        return (size_t)snprintf(buffer, buffer_size, "<fn %s>", obj_fn->name);
+        return (size_t)snprintf(buffer, buffer_size, "<fn %s>", obj_fn->name->value);
       }
       case BIFROST_VM_OBJ_MODULE:
       {
@@ -216,7 +216,7 @@ void bfDbg_DisassembleFunction(int indent, const BifrostObjFn* function)
   const size_t needed_stack_space = function->needed_stack_space;
 
   bfDbgIndentPrint(indent + 0);
-  printf("Function(%s, arity = %i, stack_space = %i, module = '%s'):\n", function->name, function->arity, (int)needed_stack_space, function->module->name);
+  printf("Function(%s, arity = %i, stack_space = %i, module = '%s'):\n", function->name->value, function->arity, (int)needed_stack_space, function->module->name);
 
   bfDbgIndentPrint(indent + 1);
   printf("Constants(%i):\n", (int)num_constants);

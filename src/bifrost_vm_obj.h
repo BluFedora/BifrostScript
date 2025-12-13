@@ -69,7 +69,7 @@ typedef struct BifrostObjStr
 typedef struct BifrostObjFn
 {
   BifrostObj               super;
-  BifrostString            name;
+  BifrostObjStr*           name;
   int32_t                  arity;  //!< An arity of -1 indicates variadic args [0, 512).
   uint16_t*                code_to_line;
   BifrostValue*            constants;
@@ -197,9 +197,8 @@ StringCmp StringCmp_FromBStr(const BifrostObjStr* self);
 StringCmp StringCmp_FromStrView(const string_range self);
 bool      StringCmp_Cmp(const StringCmp lhs, const StringCmp rhs);
 
-BifrostString bfVMString_newLen(struct BifrostVM* vm, const char* initial_data, size_t string_length);
-void          bfVMString_reserve(struct BifrostVM* vm, BifrostString* self, size_t new_capacity);
-void          bfVMString_sprintf(struct BifrostVM* vm, BifrostString* self, const char* format, ...);
+void bfVMString_reserve(struct BifrostVM* vm, BifrostString* self, size_t new_capacity);
+void bfVMString_sprintf(struct BifrostVM* vm, BifrostString* self, const char* format, ...);
 
 size_t       BifrostString_length(const BifrostObjStr* self);
 string_range BifrostString_AsStrRng2(const BifrostString self);

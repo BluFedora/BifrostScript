@@ -22,6 +22,42 @@ typedef struct BifrostStringHeader
 
 } BifrostStringHeader;
 
+static size_t StringAllocationSize(size_t capacity)
+{
+  return sizeof(BifrostStringHeader) + capacity;
+}
+
+static BifrostString bfVMString_newLen(struct BifrostVM* vm, const char* initial_data, size_t string_length)
+{
+  const size_t str_capacity = string_length + 1;
+  const size_t total_size   = StringAllocationSize(str_capacity);
+
+  BifrostStringHeader* const self = bfGC_AllocMemory(vm, NULL, 0u, total_size);
+
+  if (self)
+  {
+    self->capacity   = str_capacity;
+    self->length     = string_length;
+    char* const data = (char*)self + sizeof(BifrostStringHeader);
+
+    /*
+     // NOTE(Shareef):
+     //   According to the standard memcpy cannot take in a NULL
+     //   pointer and "size" must be non-zero, kinda stupid but ok.
+    */
+    if (initial_data && string_length)
+    {
+      LibC_memcpy(data, initial_data, string_length);
+    }
+
+    data[string_length] = '\0';
+
+    return data;
+  }
+
+  return NULL;
+}
+
 BifrostStringHeader* bfVMString_getHeader(ConstBifrostString self)
 {
   return ((BifrostStringHeader*)(self)) - 1;
@@ -30,11 +66,6 @@ BifrostStringHeader* bfVMString_getHeader(ConstBifrostString self)
 static size_t bfVMString_length(ConstBifrostString self)
 {
   return bfVMString_getHeader(self)->length;
-}
-
-static size_t StringAllocationSize(size_t capacity)
-{
-  return sizeof(BifrostStringHeader) + capacity;
 }
 
 static void bfVMString_delete(struct BifrostVM* vm, BifrostString self)
@@ -314,7 +345,7 @@ void bfObj_Destruct(struct BifrostVM* self, BifrostObj* obj)
     {
       BifrostObjFn* const fn = (BifrostObjFn*)obj;
 
-      bfVMString_delete(self, fn->name);
+      bfObj_Delete(self, &fn->name->super);
       bfVMArray_delete(self, &fn->constants);
       bfVMArray_delete(self, &fn->instructions);
       bfVMArray_delete(self, &fn->code_to_line);
@@ -542,37 +573,6 @@ bool StringCmp_Cmp(const StringCmp lhs, const StringCmp rhs)
 }
 
 BifrostStringHeader* bfVMString_getHeader(ConstBifrostString self);
-
-BifrostString bfVMString_newLen(struct BifrostVM* vm, const char* initial_data, size_t string_length)
-{
-  const size_t str_capacity = string_length + 1;
-  const size_t total_size   = StringAllocationSize(str_capacity);
-
-  BifrostStringHeader* const self = bfGC_AllocMemory(vm, NULL, 0u, total_size);
-
-  if (self)
-  {
-    self->capacity   = str_capacity;
-    self->length     = string_length;
-    char* const data = (char*)self + sizeof(BifrostStringHeader);
-
-    /*
-     // NOTE(Shareef):
-     //   According to the standard memcpy cannot take in a NULL
-     //   pointer and "size" must be non-zero, kinda stupid but ok.
-    */
-    if (initial_data && string_length)
-    {
-      LibC_memcpy(data, initial_data, string_length);
-    }
-
-    data[string_length] = '\0';
-
-    return data;
-  }
-
-  return NULL;
-}
 
 void bfVMString_reserve(struct BifrostVM* vm, BifrostString* self, size_t new_capacity)
 {

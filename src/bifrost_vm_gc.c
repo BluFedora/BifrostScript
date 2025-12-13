@@ -430,6 +430,7 @@ static void bfGCMarkObj(BifrostObj* obj, uint8_t mark_value)
       case BIFROST_VM_OBJ_FUNCTION:
       {
         BifrostObjFn* const fn = (BifrostObjFn*)obj;
+        bfGCMarkObj(&fn->name->super, mark_value);
         bfGCMarkValues(fn->constants, mark_value);
         break;
       }
