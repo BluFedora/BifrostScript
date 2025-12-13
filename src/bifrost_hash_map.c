@@ -7,27 +7,22 @@
  */
 #include "bifrost/bifrost_vm.h"  // VM Turn off GC
 
-#include "bifrost_vm_gc.h"   // Allocation Functions
-#include "bifrost_vm_obj.h"  // bf_flex_array_member
+#include "bifrost_vm_gc.h"     // Allocation Functions
+#include "bifrost_vm_obj.h"    // bf_flex_array_member
+#include "bifrost_vm_value.h"  // bfVMValue_fromNull
 
 struct bfHashNode
 {
   const BifrostObjStr* key;
+  BifrostValue         value;
   bfHashNode*          next;
-  char                 value[bf_flex_array_member];
 };
 
-static bfHashNode* bfHashMap_newNode(struct BifrostVM* vm, const void* key, size_t value_size, void* value, bfHashNode* next)
+static bfHashNode* bfHashMap_newNode(struct BifrostVM* vm)
 {
-  vm->gc_is_running = 1;
-
-  bfHashNode* const node = bfGC_AllocMemory(vm, NULL, 0u, sizeof(bfHashNode) + value_size);
-
-  node->key  = key;
-  node->next = next;
-  LibC_memcpy(node->value, value, value_size);
-
-  vm->gc_is_running = 0;
+  vm->gc_is_running      = 1;
+  bfHashNode* const node = bfGC_AllocMemory(vm, NULL, 0u, sizeof(bfHashNode));
+  vm->gc_is_running      = 0;
 
   return node;
 }
@@ -62,18 +57,12 @@ static bfHashNode* bfHashMap_getNode(const BifrostHashMap* self, const BifrostOb
 
 static void bfHashMap_deleteNode(const BifrostHashMap* self, bfHashNode* node)
 {
-  bfGC_AllocMemory(self->params.vm, node, sizeof(bfHashNode) + self->params.value_size, 0u);
+  bfGC_AllocMemory(self->vm, node, sizeof(bfHashNode), 0u);
 }
 
-void bfHashMapParams_init(BifrostHashMapParams* self, struct BifrostVM* vm)
+void bfHashMap_ctor(BifrostHashMap* self, struct BifrostVM* vm)
 {
-  self->vm         = vm;
-  self->value_size = sizeof(void*);
-}
-
-void bfHashMap_ctor(BifrostHashMap* self, const BifrostHashMapParams* params)
-{
-  self->params      = *params;
+  self->vm          = vm;
   self->num_buckets = BIFROST_HASH_MAP_BUCKET_SIZE;
 
   for (unsigned i = 0; i < self->num_buckets; ++i)
@@ -82,20 +71,20 @@ void bfHashMap_ctor(BifrostHashMap* self, const BifrostHashMapParams* params)
   }
 }
 
-void bfHashMap_set(BifrostHashMap* self, const BifrostObjStr* key, void* value)
+void bfHashMap_set(BifrostHashMap* self, const BifrostObjStr* key, const BifrostValue value)
 {
   const unsigned hash = bfHashMap_defaultHash(key) % self->num_buckets;
   bfHashNode*    node = bfHashMap_getNode(self, key, hash);
 
-  if (node)
+  if (!node)
   {
-    node->key = key;
-    LibC_memcpy(node->value, value, self->params.value_size);
+    node                = bfHashMap_newNode(self->vm);
+    node->next          = self->buckets[hash];
+    self->buckets[hash] = node;
   }
-  else
-  {
-    self->buckets[hash] = bfHashMap_newNode(self->params.vm, key, self->params.value_size, value, self->buckets[hash]);
-  }
+
+  node->key   = key;
+  node->value = value;
 }
 
 static int bfHashMap_has(const BifrostHashMap* self, const void* key)
@@ -104,12 +93,12 @@ static int bfHashMap_has(const BifrostHashMap* self, const void* key)
   return bfHashMap_getNode(self, key, hash) != NULL;
 }
 
-void* bfHashMap_get(BifrostHashMap* self, const BifrostObjStr* key)
+BifrostValue bfHashMap_get(BifrostHashMap* self, const BifrostObjStr* key)
 {
   const unsigned hash = bfHashMap_defaultHash(key) % self->num_buckets;
   bfHashNode*    node = bfHashMap_getNode(self, key, hash);
 
-  return node ? node->value : NULL;
+  return node ? node->value : bfVMValue_fromNull();
 }
 
 int bfHashMap_removeCmp(BifrostHashMap* self, const void* key, bfHashMapCmp cmp)
@@ -144,7 +133,7 @@ int bfHashMap_removeCmp(BifrostHashMap* self, const void* key, bfHashMapCmp cmp)
 
 bfHashMapIter bfHashMap_itBegin(const BifrostHashMap* self)
 {
-  bfHashMapIter begin_it = {NULL, NULL, -1, NULL};
+  bfHashMapIter begin_it = {NULL, 0, -1, NULL};
 
   for (int i = 0; i < (int)self->num_buckets; ++i)
   {

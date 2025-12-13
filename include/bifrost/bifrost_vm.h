@@ -261,16 +261,9 @@ typedef int (*bfHashMapCmp)(const void* lhs, const BifrostObjStr* rhs);
 
 typedef struct bfHashNode bfHashNode;
 
-typedef struct BifrostHashMapParams
-{
-  struct BifrostVM* vm;
-  size_t            value_size;
-
-} BifrostHashMapParams;
-
 typedef struct BifrostHashMap
 {
-  BifrostHashMapParams params;
+  struct BifrostVM* vm;
   bfHashNode*          buckets[BIFROST_HASH_MAP_BUCKET_SIZE];
   unsigned             num_buckets;
 

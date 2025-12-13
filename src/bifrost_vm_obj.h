@@ -55,6 +55,17 @@ typedef struct BifrostObj
 
 } BifrostObj;
 
+typedef struct BifrostObjStr
+{
+  BifrostObj    super;
+  BifrostString value;
+  // char*         str;
+  // uint32_t      capacity;
+  // uint32_t      length;
+  uint32_t hash;
+
+} BifrostObjStr;
+
 typedef struct BifrostObjFn
 {
   BifrostObj               super;
@@ -101,17 +112,6 @@ typedef struct BifrostObjInstance
   char           extra_data[bf_flex_array_member]; /* This is for native class data. */
 
 } BifrostObjInstance;
-
-typedef struct BifrostObjStr
-{
-  BifrostObj    super;
-  BifrostString value;
-  //char*         str;
-  //uint32_t      capacity;
-  //uint32_t      length;
-  uint32_t      hash;
-
-} BifrostObjStr;
 
 typedef struct BifrostObjNativeFn
 {
@@ -203,8 +203,6 @@ void          bfVMString_reserve(struct BifrostVM* vm, BifrostString* self, size
 void          bfVMString_sprintf(struct BifrostVM* vm, BifrostString* self, const char* format, ...);
 void          bfVMString_delete(struct BifrostVM* vm, BifrostString self);
 
-
-
 inline size_t BifrostString_length(const BifrostObjStr* self)
 {
   return bfVMString_length(self->value);
@@ -219,21 +217,16 @@ inline string_range BifrostString_AsStrRng(const BifrostObjStr* self)
 
 typedef struct bfHashMapIter
 {
-  const void* key;
-  void*       value;
-  int         index;
-  bfHashNode* next;
+  const void*  key;
+  BifrostValue value;
+  int          index;
+  bfHashNode*  next;
 
 } bfHashMapIter;
 
-/*
-  value_size - By default is the size of a pointer.
-*/
-void bfHashMapParams_init(BifrostHashMapParams* self, struct BifrostVM* vm);
-
-void          bfHashMap_ctor(BifrostHashMap* self, const BifrostHashMapParams* params);
-void          bfHashMap_set(BifrostHashMap* self, const BifrostObjStr* key, void* value);
-void*         bfHashMap_get(BifrostHashMap* self, const BifrostObjStr* key);
+void          bfHashMap_ctor(BifrostHashMap* self, struct BifrostVM* vm);
+void          bfHashMap_set(BifrostHashMap* self, const BifrostObjStr* key, const BifrostValue value);
+BifrostValue  bfHashMap_get(BifrostHashMap* self, const BifrostObjStr* key);
 int           bfHashMap_removeCmp(BifrostHashMap* self, const void* key, bfHashMapCmp cmp);  // 'key' is the first param for 'cmp'
 bfHashMapIter bfHashMap_itBegin(const BifrostHashMap* self);
 int           bfHashMap_itIsValid(const bfHashMapIter* it);

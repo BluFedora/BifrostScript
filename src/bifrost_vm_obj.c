@@ -101,11 +101,7 @@ BifrostObjInstance* bfObj_NewInstance(struct BifrostVM* self, BifrostObjClass* c
 {
   BifrostObjInstance* inst = AllocateVMObjectEx(BifrostObjInstance, self, BIFROST_VM_OBJ_INSTANCE, clz->extra_data);
 
-  BifrostHashMapParams hash_params;
-  bfHashMapParams_init(&hash_params, self);
-  hash_params.value_size = sizeof(BifrostValue);
-
-  bfHashMap_ctor(&inst->fields, &hash_params);
+  bfHashMap_ctor(&inst->fields, self);
   inst->clz = clz;
 
   const size_t num_fields = bfVMArray_size(&clz->field_initializers);
@@ -114,7 +110,7 @@ BifrostObjInstance* bfObj_NewInstance(struct BifrostVM* self, BifrostObjClass* c
   {
     BifrostVMSymbol* const sym = clz->field_initializers + i;
 
-    bfHashMap_set(&inst->fields, sym->name, &sym->value);
+    bfHashMap_set(&inst->fields, sym->name, sym->value);
   }
 
   return inst;
@@ -507,13 +503,9 @@ void* bfVMArray_back(const void* const self)
 
 void bfVMArray_delete(struct BifrostVM* vm, void* const self)
 {
-  vm->gc_is_running = true;
-
   BifrostArrayHeader* const header = Array_getHeader(*SELF_CAST(self));
 
   bfGC_AllocMemory(vm, header, ArrayAllocationSize(header->capacity, header->stride), 0u);
-
-  vm->gc_is_running = false;
 }
 
 /* string */

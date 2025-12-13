@@ -101,10 +101,7 @@ void bfVM_ctor(BifrostVM* self, const BifrostVMParams* params)
   self->finalized         = NULL;
   self->current_native_fn = NULL;
 
-  BifrostHashMapParams hash_params;
-  bfHashMapParams_init(&hash_params, self);
-  hash_params.value_size = sizeof(BifrostObjModule*);
-  bfHashMap_ctor(&self->modules, &hash_params);
+  bfHashMap_ctor(&self->modules, self);
 
   self->build_in_symbols[BIFROST_VM_SYMBOL_CTOR] = bfVM_getSymbol(self, MakeString("ctor"));
   self->build_in_symbols[BIFROST_VM_SYMBOL_DTOR] = bfVM_getSymbol(self, MakeString("dtor"));
@@ -150,7 +147,7 @@ static BifrostVMError bfVM__moduleMake(BifrostVM* self, const char* module, Bifr
     BifrostGCRoot module_gc_root;
     bfGC_PushRoot(self, &module_gc_root, &(*out)->super);
     BifrostObjStr* const module_name = bfObj_NewString(self, name_range);
-    bfHashMap_set(&self->modules, module_name, out);
+    bfHashMap_set(&self->modules, module_name, bfVMValue_fromPointer(*out));
     bfGC_PopRoot(self);
   }
 
@@ -483,11 +480,11 @@ void bfVM_stackLoadVariable(BifrostVM* self, size_t dst_idx, size_t inst_or_clas
   {
     BifrostObjInstance* const inst = (BifrostObjInstance*)obj;
 
-    BifrostValue* value = bfHashMap_get(&inst->fields, self->symbols[symbol]);
+    const BifrostValue value = bfHashMap_get(&inst->fields, self->symbols[symbol]);
 
-    if (value)
+    if (!bfVMValue_isNull(value))
     {
-      self->stack_top[dst_idx] = *value;
+      self->stack_top[dst_idx] = value;
       return;
     }
 
@@ -539,7 +536,7 @@ static int bfVM__stackStoreVariable(BifrostVM* self, BifrostValue obj, string_ra
   {
     BifrostObjInstance* inst = (BifrostObjInstance*)obj_ptr;
 
-    bfHashMap_set(&inst->fields, sym_str, &value);
+    bfHashMap_set(&inst->fields, sym_str, value);
   }
   else if (obj_ptr->type == BIFROST_VM_OBJ_CLASS)
   {
@@ -1095,11 +1092,11 @@ frame_start:;
         {
           BifrostObjInstance* inst = (BifrostObjInstance*)obj;
 
-          BifrostValue* value = bfHashMap_get(&inst->fields, self->symbols[symbol]);
+          const BifrostValue value = bfHashMap_get(&inst->fields, self->symbols[symbol]);
 
-          if (value)
+          if (!bfVMValue_isNull(value))
           {
-            locals[regs[REG_RA]] = *value;
+            locals[regs[REG_RA]] = value;
           }
           else if (inst->clz)
           {
@@ -1639,7 +1636,7 @@ BifrostObjModule* bfVM_findModule(BifrostVM* self, const char* name, size_t name
 
     if (StringCmp_Cmp(str_cmp, StringCmp_FromBStr(key)))
     {
-      return *(void**)it.value;
+      return bfVMValue_asPointer(it.value);
     }
   }
 
@@ -1728,11 +1725,10 @@ BifrostObjModule* bfVM_importModule(BifrostVM* self, const char* from, const cha
 
         if (!has_error)
         {
-          bfHashMap_set(&self->modules, module_name, &m);
+          bfHashMap_set(&self->modules, module_name, bfVMValue_fromPointer(m));
         }
 
-        // m
-        bfGC_PopRoot(self);
+        bfGC_PopRoot(self);  // m
         bfGC_AllocMemory(self, (void*)look_up.source, look_up.source_len, 0u);
       }
       else
@@ -1740,8 +1736,7 @@ BifrostObjModule* bfVM_importModule(BifrostVM* self, const char* from, const cha
         bfVMString_sprintf(self, &self->last_error->value, "Failed to find module '%.*s'", name_len, name);
       }
 
-      // module_name
-      bfGC_PopRoot(self);
+      bfGC_PopRoot(self);  // module_name
     }
     else
     {
