@@ -29,12 +29,12 @@ void bfFuncBuilder_ctor(BifrostVMFunctionBuilder* self, BifrostLexer* lexer)
   self->current_line_no      = &lexer->current_line_no;
 }
 
-void bfFuncBuilder_begin(BifrostVMFunctionBuilder* self, const char* name, size_t length)
+void bfFuncBuilder_begin(BifrostVMFunctionBuilder* self, const string_range name)
 {
   LibC_assert(self->constants == NULL, "This builder has already began.");
 
-  self->name         = name;
-  self->name_len     = length;
+  self->name         = name.str_bgn;
+  self->name_len     = name.str_len;
   self->constants    = bfVMArray_new(self->vm, self->constants, k_DefaultArraySize);
   self->instructions = bfVMArray_new(self->vm, self->instructions, k_DefaultArraySize);
   self->code_to_line = bfVMArray_new(self->vm, self->code_to_line, k_DefaultArraySize);

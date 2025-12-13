@@ -760,7 +760,7 @@ const char* bfVM_stackReadString(const BifrostVM* self, size_t idx, size_t* out_
 
   if (out_size)
   {
-    *out_size = bfVMString_length(str->value);
+    *out_size = BifrostString_length(str);
   }
 
   return str->value;

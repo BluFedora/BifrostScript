@@ -46,7 +46,7 @@ typedef struct BifrostVMFunctionBuilder
 } BifrostVMFunctionBuilder;
 
 void     bfFuncBuilder_ctor(BifrostVMFunctionBuilder* self, BifrostLexer* lexer);
-void     bfFuncBuilder_begin(BifrostVMFunctionBuilder* self, const char* name, size_t length);
+void     bfFuncBuilder_begin(BifrostVMFunctionBuilder* self, const string_range name);
 uint32_t bfFuncBuilder_addConstant(BifrostVMFunctionBuilder* self, const BifrostValue value);
 void     bfFuncBuilder_pushScope(BifrostVMFunctionBuilder* self);
 uint16_t bfFuncBuilder_declVariable(BifrostVMFunctionBuilder* self, const char* name, size_t length);

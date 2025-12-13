@@ -349,11 +349,11 @@ static BifrostValue parserTokenConstexprValue(const BifrostParser* const self, c
 
 /* Function Builder Stack */
 
-static void bfParser_pushBuilder(BifrostParser* const self, const char* fn_name, size_t fn_name_len)
+static void bfParser_pushBuilder(BifrostParser* const self, const string_range fn_name)
 {
   self->fn_builder = bfVMArray_emplace(self->vm, &self->fn_builder_stack);
   bfFuncBuilder_ctor(self->fn_builder, self->lexer);
-  bfFuncBuilder_begin(self->fn_builder, fn_name, fn_name_len);
+  bfFuncBuilder_begin(self->fn_builder, fn_name);
 }
 
 static void bfParser_popBuilder(BifrostParser* const self, BifrostObjFn* fn_out, int arity)
@@ -559,7 +559,7 @@ void bfParser_ctor(BifrostParser* const self, struct BifrostVM* vm, BifrostLexer
   self->loop_stack       = NULL;
   self->vm               = vm;
   self->current_module   = current_module;
-  bfParser_pushBuilder(self, current_module->name, bfVMString_length(current_module->name));
+  bfParser_pushBuilder(self, BifrostString_AsStrRng2(current_module->name));
 }
 
 bool bfParser_compile(BifrostParser* const self)
@@ -638,7 +638,7 @@ static string_range parserBeginFunction(BifrostParser* const self, const bool re
     Parser_EmitError(self, "An identifier, \"[]\" or \"[]=\" is expected after 'func' keyword.");
   }
 
-  bfParser_pushBuilder(self, name_str.str_bgn, name_str.str_len);
+  bfParser_pushBuilder(self, name_str);
   return name_str;
 }
 

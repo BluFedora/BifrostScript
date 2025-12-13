@@ -198,15 +198,11 @@ StringCmp StringCmp_FromStrView(const string_range self);
 bool      StringCmp_Cmp(const StringCmp lhs, const StringCmp rhs);
 
 BifrostString bfVMString_newLen(struct BifrostVM* vm, const char* initial_data, size_t string_length);
-size_t        bfVMString_length(ConstBifrostString self);
 void          bfVMString_reserve(struct BifrostVM* vm, BifrostString* self, size_t new_capacity);
 void          bfVMString_sprintf(struct BifrostVM* vm, BifrostString* self, const char* format, ...);
-void          bfVMString_delete(struct BifrostVM* vm, BifrostString self);
 
-inline size_t BifrostString_length(const BifrostObjStr* self)
-{
-  return bfVMString_length(self->value);
-}
+size_t       BifrostString_length(const BifrostObjStr* self);
+string_range BifrostString_AsStrRng2(const BifrostString self);
 
 inline string_range BifrostString_AsStrRng(const BifrostObjStr* self)
 {

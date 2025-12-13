@@ -27,6 +27,23 @@ BifrostStringHeader* bfVMString_getHeader(ConstBifrostString self)
   return ((BifrostStringHeader*)(self)) - 1;
 }
 
+static size_t bfVMString_length(ConstBifrostString self)
+{
+  return bfVMString_getHeader(self)->length;
+}
+
+static size_t StringAllocationSize(size_t capacity)
+{
+  return sizeof(BifrostStringHeader) + capacity;
+}
+
+static void bfVMString_delete(struct BifrostVM* vm, BifrostString self)
+{
+  BifrostStringHeader* const header = bfVMString_getHeader(self);
+
+  bfGC_AllocMemory(vm, header, StringAllocationSize(header->capacity), 0u);
+}
+
 static uint32_t bfVMString_hashN(const char* str, size_t length)
 {
   uint32_t hash = 0x811c9dc5;
@@ -526,11 +543,6 @@ bool StringCmp_Cmp(const StringCmp lhs, const StringCmp rhs)
 
 BifrostStringHeader* bfVMString_getHeader(ConstBifrostString self);
 
-static size_t StringAllocationSize(size_t capacity)
-{
-  return sizeof(BifrostStringHeader) + capacity;
-}
-
 BifrostString bfVMString_newLen(struct BifrostVM* vm, const char* initial_data, size_t string_length)
 {
   const size_t str_capacity = string_length + 1;
@@ -560,11 +572,6 @@ BifrostString bfVMString_newLen(struct BifrostVM* vm, const char* initial_data, 
   }
 
   return NULL;
-}
-
-size_t bfVMString_length(ConstBifrostString self)
-{
-  return bfVMString_getHeader(self)->length;
 }
 
 void bfVMString_reserve(struct BifrostVM* vm, BifrostString* self, size_t new_capacity)
@@ -598,13 +605,12 @@ void bfVMString_reserve(struct BifrostVM* vm, BifrostString* self, size_t new_ca
   }
 }
 
-void bfVMString_delete(struct BifrostVM* vm, BifrostString self)
+size_t BifrostString_length(const BifrostObjStr* self)
 {
-  vm->gc_is_running = true;
+  return bfVMString_length(self->value);
+}
 
-  BifrostStringHeader* const header = bfVMString_getHeader(self);
-
-  bfGC_AllocMemory(vm, header, StringAllocationSize(header->capacity), 0u);
-
-  vm->gc_is_running = false;
+string_range BifrostString_AsStrRng2(const BifrostString self)
+{
+  return MakeStringLen(self, bfVMString_length(self));
 }

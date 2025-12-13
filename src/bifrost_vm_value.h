@@ -65,10 +65,10 @@ bool   bfVMValue_isThuthy(const BifrostValue self);
 BifrostValue bfVMValue_sub(const BifrostValue lhs, const BifrostValue rhs);
 BifrostValue bfVMValue_mul(const BifrostValue lhs, const BifrostValue rhs);
 BifrostValue bfVMValue_div(const BifrostValue lhs, const BifrostValue rhs);
-bool      bfVMValue_ee(const BifrostValue lhs, const BifrostValue rhs);
-bool      bfVMValue_lt(const BifrostValue lhs, const BifrostValue rhs);
-bool      bfVMValue_gt(const BifrostValue lhs, const BifrostValue rhs);
-bool      bfVMValue_ge(const BifrostValue lhs, const BifrostValue rhs);
+bool         bfVMValue_ee(const BifrostValue lhs, const BifrostValue rhs);
+bool         bfVMValue_lt(const BifrostValue lhs, const BifrostValue rhs);
+bool         bfVMValue_gt(const BifrostValue lhs, const BifrostValue rhs);
+bool         bfVMValue_ge(const BifrostValue lhs, const BifrostValue rhs);
 
 #if __cplusplus
 }
