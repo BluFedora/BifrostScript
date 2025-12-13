@@ -264,8 +264,8 @@ typedef struct bfHashNode bfHashNode;
 typedef struct BifrostHashMap
 {
   struct BifrostVM* vm;
-  bfHashNode*          buckets[BIFROST_HASH_MAP_BUCKET_SIZE];
-  unsigned             num_buckets;
+  bfHashNode*       buckets[BIFROST_HASH_MAP_BUCKET_SIZE];
+  unsigned          num_buckets;
 
 } BifrostHashMap;
 

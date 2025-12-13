@@ -92,11 +92,11 @@ static void bfGCMarkObjects(struct BifrostVM* self)
 
   bfHashMapFor(it, &self->modules)
   {
-    BifrostObjStr* const key   = (void*)it.key;
-    BifrostObj* const    value = *(BifrostObj**)it.value;
+    BifrostObjStr* const key   = (BifrostObjStr*)it.key;
+    const BifrostValue   value = it.value;
 
     bfGCMarkObj(&key->super, GC_MARK_REACHABLE);
-    bfGCMarkObj(value, GC_MARK_REACHABLE);
+    bfGCMarkValue(value, GC_MARK_REACHABLE);
   }
 
   bfValueHandle cursor = self->handles;
@@ -422,7 +422,8 @@ static void bfGCMarkObj(BifrostObj* obj, uint8_t mark_value)
         bfGCMarkObj(&inst->clz->super, mark_value);
         bfHashMapFor(it, &inst->fields)
         {
-          bfGCMarkValue(*(BifrostValue*)it.value, mark_value);
+          bfGCMarkObj((BifrostObj*)&it.key->super, mark_value);
+          bfGCMarkValue(it.value, mark_value);
         }
         break;
       }

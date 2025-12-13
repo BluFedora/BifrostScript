@@ -217,10 +217,10 @@ inline string_range BifrostString_AsStrRng(const BifrostObjStr* self)
 
 typedef struct bfHashMapIter
 {
-  const void*  key;
-  BifrostValue value;
-  int          index;
-  bfHashNode*  next;
+  const BifrostObjStr* key;
+  BifrostValue         value;
+  int                  index;
+  bfHashNode*          next;
 
 } bfHashMapIter;
 
