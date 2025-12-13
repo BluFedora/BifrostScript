@@ -558,7 +558,7 @@ BF_VM_API void bfVM_classSetBaseClass(BifrostVM* self, size_t idx, size_t clz_id
  * @param dst_idx
  *   The location the variable will be loaded into.
  *
- * @param inst_or_class_or_module
+ * @param module_index
  *   The index of the instance, class, or module.
  *
  * @param variable
@@ -568,22 +568,22 @@ BF_VM_API void bfVM_stackLoadVariable(BifrostVM* self, size_t dst_idx, size_t in
 
 /*!
  * @brief
- *   Stores into \p inst_or_class_or_module \p field = \p value_idx.
+ *   Stores into \p module_index \p field = \p value_idx.
  *
  * @param self
  *   The vm that will be operated on.
  *
- * @param inst_or_class_or_module
+ * @param module_index
  *   The instance, class, or module to set the field of.
  *
  * @param field
- *   A nul terminated string specifying the name of the field to set in \p inst_or_class_or_module.
+ *   A nul terminated string specifying the name of the field to set in \p module_index.
  *
  * @param value_idx
- *   The location of the value to write to \p inst_or_class_or_module's \p field.
+ *   The location of the value to write to \p module_index's \p field.
  *
  * @return BifrostVMError
- *   BIFROST_VM_ERROR_INVALID_OP_ON_TYPE - \p inst_or_class_or_module was not a valid object to set a field on.
+ *   BIFROST_VM_ERROR_INVALID_OP_ON_TYPE - \p module_index was not a valid object to set a field on.
  */
 BF_VM_API BifrostVMError bfVM_stackStoreVariable(BifrostVM*  self,
                                                  size_t      inst_or_class_or_module,
@@ -592,7 +592,7 @@ BF_VM_API BifrostVMError bfVM_stackStoreVariable(BifrostVM*  self,
 
 /*!
  * @brief
- *   Creates a native function object and assigns it to \p inst_or_class_or_module \p field = \p value_idx.
+ *   Creates a native function object and assigns it to \p module_index \p field = \p value_idx.
  *   This function is a wrapper around 'bfVM_stackStoreClosure' but with no statics or userdata.
  *
  *   TODO: Return error for memory alloc failure.
@@ -600,11 +600,11 @@ BF_VM_API BifrostVMError bfVM_stackStoreVariable(BifrostVM*  self,
  * @param self
  *   The vm that will be operated on.
  *
- * @param inst_or_class_or_module
+ * @param module_index
  *   The instance, class, or module to set the field of.
  *
  * @param field
- *   A nul terminated string specifying the name of the field to set in \p inst_or_class_or_module.
+ *   A nul terminated string specifying the name of the field to set in \p module_index.
  *
  * @param func
  *   The function to be binded.
@@ -613,7 +613,7 @@ BF_VM_API BifrostVMError bfVM_stackStoreVariable(BifrostVM*  self,
  *   The number of arguments your function expects. Use -1 for variable number of arguments.
  *
  * @return BifrostVMError
- *   BIFROST_VM_ERROR_INVALID_OP_ON_TYPE - \p inst_or_class_or_module was not a valid object to set a field on.
+ *   BIFROST_VM_ERROR_INVALID_OP_ON_TYPE - \p module_index was not a valid object to set a field on.
  */
 BF_VM_API BifrostVMError bfVM_stackStoreNativeFn(BifrostVM*  self,
                                                  size_t      inst_or_class_or_module,
@@ -630,11 +630,11 @@ BF_VM_API BifrostVMError bfVM_stackStoreNativeFn(BifrostVM*  self,
  * @param self
  *   The vm that will be operated on.
  *
- * @param inst_or_class_or_module
+ * @param module_index
  *   The instance, class, or module to set the field of.
  *
  * @param field
- *   A nul terminated string specifying the name of the field to set in \p inst_or_class_or_module.
+ *   A nul terminated string specifying the name of the field to set in \p module_index.
  *
  * @param func
  *   The function to be binded.
@@ -649,7 +649,7 @@ BF_VM_API BifrostVMError bfVM_stackStoreNativeFn(BifrostVM*  self,
  *   The number of bytes for user_data storage.
  *
  * @return BifrostVMError
- *   BIFROST_VM_ERROR_INVALID_OP_ON_TYPE - \p inst_or_class_or_module was not a valid object to set a field on.
+ *   BIFROST_VM_ERROR_INVALID_OP_ON_TYPE - \p module_index was not a valid object to set a field on.
  */
 BF_VM_API BifrostVMError bfVM_stackStoreClosure(BifrostVM*  self,
                                                 size_t      inst_or_class_or_module,
@@ -681,6 +681,7 @@ BF_VM_API BifrostVMError bfVM_closureGetStatic(BifrostVM* self, size_t dst_idx, 
 /*!
  * @brief
  *   Sets \p closure_idx 's static slot at \p static_idx to the value at \p value_idx.
+ *
  * @param self
  *   The vm that will be operated on.
  *
@@ -698,8 +699,6 @@ BF_VM_API BifrostVMError bfVM_closureGetStatic(BifrostVM* self, size_t dst_idx, 
  *   BIFROST_VM_ERROR_INVALID_ARGUMENT   - \p static_idx is an invalid index into the number of statics \p closure_idx contains.
  */
 BF_VM_API BifrostVMError bfVM_closureSetStatic(BifrostVM* self, size_t closure_idx, size_t static_idx, size_t value_idx);
-
-/* TODO: add a function line 'bfVM_closureSetStatic' that operates on the current native function. */
 
 /*!
  * @brief
@@ -733,22 +732,22 @@ BF_VM_API void* bfVM_closureGetExtraData(BifrostVM* self);
 
 /*!
  * @brief
- *   Creates a class binding an sets the field (BifrostVMClassBind::name) of \p inst_or_class_or_module
+ *   Creates a class binding an sets the field (BifrostVMClassBind::name) of \p module_index
  *   to the new class.
  *
  * @param self
  *   The vm that will be operated on.
  *
- * @param inst_or_class_or_module
+ * @param module_index
  *   The instance, class, or module to set the field of.
  *
  * @param clz_bind
  *   The parameters in which to create the class.
  *
  * @return BifrostVMError
- *   BIFROST_VM_ERROR_INVALID_OP_ON_TYPE - \p inst_or_class_or_module is not the type of object that can have a field set.
+ *   BIFROST_VM_ERROR_INVALID_OP_ON_TYPE - \p module_index is not the type of object that can have a field set.
  */
-BF_VM_API BifrostVMError bfVM_stackStoreClass(BifrostVM* self, size_t inst_or_class_or_module, const BifrostVMClassBind* clz_bind);
+BF_VM_API BifrostVMError bfVM_stackStoreClass(BifrostVM* self, size_t module_index, const BifrostVMClassBind* clz_bind);
 
 /*!
  * @brief
@@ -825,7 +824,7 @@ BF_VM_API void bfVM_stackSetNil(BifrostVM* self, size_t idx);
  *   NULL      - if \p is a null object.
  *   Otherwise - a pointer to the instance object memory.
  */
-BF_VM_API void* bfVM_stackReadInstance(const BifrostVM* self, size_t idx);  // Also works on null values, just returns NULL
+BF_VM_API void* bfVM_stackReadInstance(const BifrostVM* self, size_t idx);
 
 /*!
  * @brief
@@ -844,7 +843,7 @@ BF_VM_API void* bfVM_stackReadInstance(const BifrostVM* self, size_t idx);  // A
  * @return const char*
  *   A nul-terminated string stored in \p idx.
  */
-BF_VM_API const char* bfVM_stackReadString(const BifrostVM* self, size_t idx, size_t* out_size);  // 'out_size' can be NULL.
+BF_VM_API const char* bfVM_stackReadString(const BifrostVM* self, size_t idx, size_t* out_size);
 
 /*!
  * @brief
@@ -914,8 +913,7 @@ BF_VM_API int32_t bfVM_stackGetArity(const BifrostVM* self, size_t idx);
  *   Creates a handle to a the value at \p idx so that you can
  *   cache that value and keep it safe from being garbage collected.
  *
- *   Be sure to 'bfVM_stackDestroyHandle' the handle before the end of the
- *   vm's lifetime.
+ *   Be sure to 'bfVM_stackDestroyHandle' the handle before the end of the vm's lifetime.
  *
  * @param self
  *   The vm that will be operated on.

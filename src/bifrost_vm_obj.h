@@ -93,7 +93,7 @@ typedef struct BifrostObjClass
   BifrostObj              super;
   BifrostString           name;
   struct BifrostObjClass* base_clz;
-  BifrostObjModule*       module;
+  BifrostObjModule*       module; // TODO(SR): Remove me, only needed for dumb API decision....
   BifrostVMSymbol*        symbols;
   BifrostVMSymbol*        field_initializers;
   size_t                  extra_data;

@@ -75,7 +75,7 @@ static void bfVMString_delete(struct BifrostVM* vm, BifrostString self)
   bfGC_AllocMemory(vm, header, StringAllocationSize(header->capacity), 0u);
 }
 
-static uint32_t bfVMString_hashN(const char* str, size_t length)
+static uint32_t BifrostString_Hash(const char* str, size_t length)
 {
   uint32_t hash = 0x811c9dc5;
 
@@ -242,7 +242,7 @@ BifrostObjStr* bfObj_NewString(struct BifrostVM* self, string_range value)
 
   obj->value = bfVMString_newLen(self, value.str_bgn, value.str_len);
   bfVMString_unescape(obj->value);
-  obj->hash = bfVMString_hashN(obj->value, bfVMString_length(obj->value));
+  obj->hash = BifrostString_Hash(obj->value, bfVMString_length(obj->value));
 
   return obj;
 }
@@ -560,11 +560,14 @@ void bfVMArray_delete(struct BifrostVM* vm, void* const self)
 
 StringCmp StringCmp_Make(const char* const str, const size_t length)
 {
-  return (StringCmp){.str = str, .length = (uint32_t)length, .hash = bfVMString_hashN(str, length)};
+  return (StringCmp){.str = str, .length = (uint32_t)length, .hash = BifrostString_Hash(str, length)};
 }
 
 StringCmp StringCmp_FromStr(ConstBifrostString self) { return StringCmp_Make(self, bfVMString_length(self)); }
-StringCmp StringCmp_FromBStr(const BifrostObjStr* self) { return StringCmp_FromStr(self->value); }
+StringCmp StringCmp_FromBStr(const BifrostObjStr* self)
+{
+  return (StringCmp){.str = self->value, .length = (uint32_t)BifrostString_length(self), .hash = self->hash};
+}
 StringCmp StringCmp_FromStrView(const string_range self) { return StringCmp_Make(self.str_bgn, self.str_len); }
 
 bool StringCmp_Cmp(const StringCmp lhs, const StringCmp rhs)

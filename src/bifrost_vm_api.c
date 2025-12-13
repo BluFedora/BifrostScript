@@ -373,7 +373,7 @@ static BifrostObjClass* createClassBinding(BifrostVM* self, BifrostValue obj, co
 
   BifrostGCRoot class_gc_root;
   bfGC_PushRoot(self, &class_gc_root, &clz->super);
-  if (bfVM__stackStoreVariable(self, obj, name, bfVMValue_fromPointer(clz)))
+  if (bfVM__stackStoreVariable(self, obj, name, bfVMValue_fromPointer(clz)) != 0)
   {
     bfGC_PopRoot(self);
 
@@ -585,7 +585,7 @@ BifrostVMError bfVM_closureGetStatic(BifrostVM* self, size_t dst_idx, size_t sta
   bfVM_assertStackIndex(self, dst_idx);
   bfVM_assertStackIndex(self, static_idx);
 
-  const BifrostObjNativeFn* native_fn = self->current_native_fn;
+  const BifrostObjNativeFn* const native_fn = self->current_native_fn;
 
   if (!native_fn || static_idx >= native_fn->num_statics)
   {
