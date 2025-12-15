@@ -45,6 +45,4 @@ int  LibC_strcmp(const char* const lhs, const char* const rhs);
 typedef char*            BifrostString;
 typedef struct BifrostVM BifrostVM;
 
-void bfVMString_sprintf(BifrostVM* vm, BifrostString* self, const char* format, ...);
-
 #endif /* BIFROST_LIBC_H */

@@ -93,7 +93,7 @@ typedef struct BifrostObjClass
   BifrostObj              super;
   BifrostString           name;
   struct BifrostObjClass* base_clz;
-  BifrostObjModule*       module; // TODO(SR): Remove me, only needed for dumb API decision....
+  BifrostObjModule*       module;  // TODO(SR): Remove me, only needed for dumb API decision....
   BifrostVMSymbol*        symbols;
   BifrostVMSymbol*        field_initializers;
   size_t                  extra_data;
@@ -233,6 +233,96 @@ void          bfHashMap_dtor(BifrostHashMap* self);
   for (bfHashMapIter it = bfHashMap_itBegin(map); \
        bfHashMap_itIsValid(&(it));                \
        bfHashMap_itGetNext(map, &(it)))
+
+typedef enum StrFmtType
+{
+  StrFmtType_Str,
+  StrFmtType_Int,
+  StrFmtType_Flt,
+  StrFmtType_Char,
+
+} StrFmtType;
+
+typedef enum StrFmtFlag
+{
+  StrFmt_Shift_PlusSign  = 0,
+  StrFmt_Count_PlusSign  = 1,
+  StrFmt_Shift_IsHex     = StrFmt_Shift_PlusSign + StrFmt_Count_PlusSign,
+  StrFmt_Count_IsHex     = 1,
+  StrFmt_Shift_IsSigned  = StrFmt_Shift_IsHex + StrFmt_Count_IsHex,
+  StrFmt_Count_IsSigned  = 1,
+  StrFmt_Shift_Type      = StrFmt_Shift_IsSigned + StrFmt_Count_IsSigned,
+  StrFmt_Count_Type      = 2,
+  StrFmt_Shift_Width     = StrFmt_Shift_Type + StrFmt_Count_Type,
+  StrFmt_Count_Width     = 27,
+  StrFmt_Shift_Precision = StrFmt_Shift_Width + StrFmt_Count_Width,
+  StrFmt_Count_Precision = 32,
+
+  StrFmt_BitCount = StrFmt_Shift_Precision + StrFmt_Count_Precision,
+
+} StrFmtFlag;
+
+inline uint64_t StrFmt_MakeFlag(const uint64_t value, const uint64_t shift, const uint64_t bit_count)
+{
+  const uint64_t mask = ((uint64_t)(1) << bit_count) - 1;
+
+  return (value & mask) << shift;
+}
+
+inline uint64_t FmtOpt_PlusSign(void) { return StrFmt_MakeFlag(1, StrFmt_Shift_PlusSign, StrFmt_Count_PlusSign); }
+inline uint64_t FmtOpt_Hex(void) { return StrFmt_MakeFlag(1, StrFmt_Shift_IsHex, StrFmt_Count_IsHex); }
+inline uint64_t FmtOpt_Signed(void) { return StrFmt_MakeFlag(1, StrFmt_Shift_IsSigned, StrFmt_Count_IsSigned); }
+inline uint64_t FmtOpt_Type(const uint64_t type) { return StrFmt_MakeFlag(type, StrFmt_Shift_Type, StrFmt_Count_Type); }
+inline uint64_t FmtOpt_Width(const uint64_t value) { return StrFmt_MakeFlag(value, StrFmt_Shift_Width, StrFmt_Count_Width); }
+inline uint64_t FmtOpt_Precision(const uint64_t value) { return StrFmt_MakeFlag(value, StrFmt_Shift_Precision, StrFmt_Count_Precision); }
+
+typedef union StrFmtData
+{
+  const char* str;
+  uint64_t    u64;
+  int64_t     i64;
+  double      f64;
+  char        ch;
+
+} StrFmtData;
+
+typedef struct StrFmt
+{
+  uint64_t   flags;
+  StrFmtData data;
+
+} StrFmt;
+
+inline StrFmt StrFmt_Make(const StrFmtType type, const uint64_t flags, const StrFmtData data)
+{
+  return (StrFmt){.flags = FmtOpt_Type(type) | flags, .data = data};
+}
+
+inline StrFmt fmt_Str(const string_range str) { return StrFmt_Make(StrFmtType_Str, FmtOpt_Precision(str.str_len), (StrFmtData){.str = str.str_bgn}); }
+inline StrFmt fmt_Uint(const uint64_t value) { return StrFmt_Make(StrFmtType_Int, 0x0, (StrFmtData){.u64 = value}); }
+inline StrFmt fmt_Sint(const int64_t value) { return StrFmt_Make(StrFmtType_Int, FmtOpt_Signed(), (StrFmtData){.i64 = value}); }
+inline StrFmt fmt_Flt(const double value) { return StrFmt_Make(StrFmtType_Flt, 0x0, (StrFmtData){.f64 = value}); }
+inline StrFmt fmt_Char(const char value) { return StrFmt_Make(StrFmtType_Char, 0x0, (StrFmtData){.ch = value}); }
+
+inline StrFmt fmtEx(const StrFmt fmt, const uint64_t flags)
+{
+  StrFmt result  = fmt;
+  result.flags  |= flags;
+  return result;
+}
+
+void String_FmtImpl(BifrostVM* const vm, BifrostObjStr* const str, const char* const fmt_str, const size_t fmt_str_length, const StrFmt* const fmt_args, const size_t fmt_args_count);
+
+#define String_Fmt(vm, str, fmt, ...)                                                                                \
+  do {                                                                                                               \
+    const StrFmt fmt_args[] =                                                                                        \
+     {                                                                                                               \
+      {0, {.ch = '0'}}, /* Extra element to allow for empty args. */                                                 \
+      __VA_ARGS__,                                                                                                   \
+    };                                                                                                               \
+                                                                                                                     \
+    String_FmtImpl((vm), (str), (fmt), sizeof(fmt) - 1, fmt_args + 1, (sizeof(fmt_args) / sizeof(fmt_args[0])) - 1); \
+  } while (0)
 
 #if __cplusplus
 }

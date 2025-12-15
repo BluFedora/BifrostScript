@@ -8,7 +8,7 @@
 
 void(LibC_assert)(const char* const msg, const char* const condition_str, const char* const file, const int line, const char* const func)
 {
-  fprintf(stderr, "ASSERT(%s): %s:%s(%i): \"%s\"\n", msg, condition_str, file, line, func);
+  fprintf(stderr, "ASSERT(%s)[%s|%i]: \"%s\" {%s}\n", file, func, line, msg, condition_str);
   fflush(stderr);
   abort();
 }
@@ -26,6 +26,9 @@ void   LibC_memset(void* const dst, const int value, const size_t size) { memset
 int    LibC_strncmp(const char* const lhs, const char* const rhs, const size_t length) { return strncmp(lhs, rhs, length); }
 int    LibC_strcmp(const char* const lhs, const char* const rhs) { return strcmp(lhs, rhs); }
 
+#include "bifrost/bifrost_vm.h"
+#include "bifrost_vm_gc.h"  // Allocation Functions
+
 typedef struct BifrostStringHeader
 {
   size_t capacity;
@@ -37,6 +40,49 @@ typedef const char* ConstBifrostString;
 
 extern void                 bfVMString_reserve(struct BifrostVM* vm, BifrostString* self, size_t new_capacity);
 extern BifrostStringHeader* bfVMString_getHeader(ConstBifrostString self);
+
+static size_t StringAllocationSize(size_t capacity)
+{
+  return sizeof(BifrostStringHeader) + capacity;
+}
+
+static void bfVMString_delete(struct BifrostVM* vm, BifrostString self)
+{
+  BifrostStringHeader* const header = bfVMString_getHeader(self);
+
+  bfGC_AllocMemory(vm, header, StringAllocationSize(header->capacity), 0u);
+}
+
+void bfVMString_reserve(struct BifrostVM* vm, BifrostString* self, size_t new_capacity)
+{
+  BifrostStringHeader* header = bfVMString_getHeader(*self);
+
+  if (new_capacity > header->capacity)
+  {
+    const size_t old_capacity = header->capacity;
+
+    while (header->capacity < new_capacity)
+    {
+      header->capacity *= 2;
+    }
+
+    vm->gc_is_running = true;
+
+    header = (BifrostStringHeader*)bfGC_AllocMemory(vm, header, StringAllocationSize(old_capacity), StringAllocationSize(header->capacity));
+
+    if (header)
+    {
+      *self = (char*)header + sizeof(BifrostStringHeader);
+    }
+    else
+    {
+      bfVMString_delete(vm, *self);
+      *self = NULL;
+    }
+
+    vm->gc_is_running = false;
+  }
+}
 
 void bfVMString_sprintf(BifrostVM* vm, BifrostString* self, const char* format, ...)
 {
