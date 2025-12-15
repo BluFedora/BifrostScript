@@ -198,7 +198,7 @@ static bfToken bfLexer_parseID(BifrostLexer* self)
     const bfToken* keyword        = s_Keywords + i;
     const size_t   keyword_length = keyword->str_range.str_len;
 
-    if (keyword_length == length && LibC_strncmp(keyword->str_range.str_bgn, bgn, length) == 0)
+    if (keyword_length == length && LibC_memcmp(keyword->str_range.str_bgn, bgn, length) == 0)
     {
       return *keyword;
     }

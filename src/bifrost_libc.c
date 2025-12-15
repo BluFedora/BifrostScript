@@ -1,10 +1,9 @@
 #include "bifrost_libc.h"
 
-#include <ctype.h>  /* isalpha, isdigit, isspace */
-#include <stdarg.h> /* va_list, va_start, va_copy, va_end */
-#include <stdio.h>  /* fprintf, stderr, fflush, vsnprintf,  */
-#include <stdlib.h> /* abort, strtod */
-#include <string.h> /* memcpy, memmove, memset, strncmp */
+#include <ctype.h>  /* isalpha, isdigit, isspace        */
+#include <stdio.h>  /* fprintf, stderr, fflush,         */
+#include <stdlib.h> /* realloc, free, abort, strtod     */
+#include <string.h> /* memcpy, memmove, memset          */
 
 void(LibC_assert)(const char* const msg, const char* const condition_str, const char* const file, const int line, const char* const func)
 {
@@ -23,5 +22,3 @@ void   LibC_memcpy(void* const dst, const void* const src, const size_t size) { 
 int    LibC_memcmp(const void* const lhs, const void* const rhs, const size_t length) { return memcmp(lhs, rhs, length); }
 void   LibC_memmove(void* const dst, const void* const src, const size_t size) { memmove(dst, src, size); }
 void   LibC_memset(void* const dst, const int value, const size_t size) { memset(dst, value, size); }
-int    LibC_strncmp(const char* const lhs, const char* const rhs, const size_t length) { return strncmp(lhs, rhs, length); }
-int    LibC_strcmp(const char* const lhs, const char* const rhs) { return strcmp(lhs, rhs); }

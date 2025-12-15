@@ -37,8 +37,6 @@ void LibC_memcpy(void* const dst, const void* const src, const size_t size);
 int  LibC_memcmp(const void* const lhs, const void* const rhs, const size_t length);
 void LibC_memmove(void* const dst, const void* const src, const size_t size);
 void LibC_memset(void* const dst, const int value, const size_t size);
-int  LibC_strncmp(const char* const lhs, const char* const rhs, const size_t length);
-int  LibC_strcmp(const char* const lhs, const char* const rhs);
 
 /* custom */
 

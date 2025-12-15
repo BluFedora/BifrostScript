@@ -572,7 +572,7 @@ StringCmp StringCmp_FromStrView(const string_range self) { return StringCmp_Make
 
 bool StringCmp_Cmp(const StringCmp lhs, const StringCmp rhs)
 {
-  return lhs.hash == rhs.hash && lhs.length == rhs.length && LibC_strncmp(lhs.str, rhs.str, lhs.length) == 0;
+  return lhs.hash == rhs.hash && lhs.length == rhs.length && LibC_memcmp(lhs.str, rhs.str, lhs.length) == 0;
 }
 
 BifrostStringHeader* bfVMString_getHeader(ConstBifrostString self);
