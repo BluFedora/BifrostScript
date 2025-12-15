@@ -1015,7 +1015,7 @@ static void bfVM_popAllCallFrames(BifrostVM* self, const BifrostVMStackFrame* re
       const int                  line_num = fn ? fn->code_to_line[frame->ip - fn->instructions] : -1;
       const char* const          fn_name  = fn ? fn->name->value : "<native>";
 
-      bfVMString_sprintf(self, &self->last_error->value, "%*.s[%zu] Stack Frame Line(%u): %s\n", (int)i * 3, "", i, (unsigned)line_num, fn_name);
+      bfVMString_sprintf(self, &self->last_error->value, "[%zu] Stack Frame Line(%u): %s", i, (unsigned)line_num, fn_name);
 
       error_fn(self, BIFROST_VM_ERROR_STACK_TRACE, line_num, self->last_error->value);
     }
@@ -1083,7 +1083,7 @@ frame_start:;
         {
           char error_buffer[512];
           bfDbg_ValueToString(obj_value, error_buffer, sizeof(error_buffer));
-          BF_RUNTIME_ERROR("Cannot load symbol (%s) from non object %s\n", symbol_str->value, error_buffer);
+          BF_RUNTIME_ERROR("Cannot load symbol (%s) from non object %s", symbol_str->value, error_buffer);
         }
 
         BifrostObj* obj = bfVMValue_asPointer(obj_value);
@@ -1133,7 +1133,7 @@ frame_start:;
 
           if (!found_field)
           {
-            BF_RUNTIME_ERROR("'%s::%s' is not defined (also not found in any base class).\n", original_clz->name, self->symbols[symbol]->value);
+            BF_RUNTIME_ERROR("'%s::%s' is not defined (also not found in any base class).", original_clz->name, self->symbols[symbol]->value);
           }
         }
         else if (obj->type == BIFROST_VM_OBJ_MODULE)
@@ -1144,7 +1144,7 @@ frame_start:;
         }
         else
         {
-          BF_RUNTIME_ERROR("(%u) ERROR, loading a symbol (%s) on a non instance obj.\n", obj->type, self->symbols[symbol]->value);
+          BF_RUNTIME_ERROR("(%u) ERROR, loading a symbol (%s) on a non instance obj.", obj->type, self->symbols[symbol]->value);
         }
         break;
       }
@@ -1157,12 +1157,12 @@ frame_start:;
         {
           if (err_store == 1)
           {
-            BF_RUNTIME_ERROR("Cannot store symbol into non object\n");
+            BF_RUNTIME_ERROR("Cannot store symbol into non object");
           }
 
           if (err_store == 2)
           {
-            BF_RUNTIME_ERROR("Cannot store a symbol on a non instance or class obj.\n");
+            BF_RUNTIME_ERROR("Cannot store a symbol on a non instance or class obj.");
           }
         }
         break;
@@ -1212,7 +1212,7 @@ frame_start:;
             char string_buffer[512];
             bfDbg_ValueTypeToString(value, string_buffer, sizeof(string_buffer));
 
-            BF_RUNTIME_ERROR("Called new on a non Class type (%s).\n", string_buffer);
+            BF_RUNTIME_ERROR("Called new on a non Class type (%s).", string_buffer);
           }
         }
         else
@@ -1220,7 +1220,7 @@ frame_start:;
           char string_buffer[512];
           bfDbg_ValueTypeToString(value, string_buffer, sizeof(string_buffer));
 
-          BF_RUNTIME_ERROR("Called new on a non Class type (%s).\n", string_buffer);
+          BF_RUNTIME_ERROR("Called new on a non Class type (%s).", string_buffer);
         }
         break;
       }
@@ -1267,7 +1267,7 @@ frame_start:;
 
                 if (call_obj->type != BIFROST_VM_OBJ_FUNCTION && call_obj->type != BIFROST_VM_OBJ_NATIVE_FN)
                 {
-                  BF_RUNTIME_ERROR("'%s::call' must be defined as a function to use instance as function.\n", clz->name);
+                  BF_RUNTIME_ERROR("'%s::call' must be defined as a function to use instance as function.", clz->name);
                 }
 
                 if (bfVM_ensureStackspace(self, num_args + (size_t)1, locals + ra))
@@ -1285,12 +1285,12 @@ frame_start:;
               }
               else
               {
-                BF_RUNTIME_ERROR("'%s::call' must be defined as a function to use instance as function.\n", clz->name);
+                BF_RUNTIME_ERROR("'%s::call' must be defined as a function to use instance as function.", clz->name);
               }
             }
             else
             {
-              BF_RUNTIME_ERROR("%s does not define a 'call' function.\n", clz->name);
+              BF_RUNTIME_ERROR("%s does not define a 'call' function.", clz->name);
             }
           }
 
@@ -1300,7 +1300,7 @@ frame_start:;
 
             if (fn->arity >= 0 && num_args != (size_t)fn->arity)
             {
-              BF_RUNTIME_ERROR("Function (%s) called with %i argument(s) but requires %i.\n", fn->name, (int)num_args, (int)fn->arity);
+              BF_RUNTIME_ERROR("Function (%s) called with %i argument(s) but requires %i.", fn->name, (int)num_args, (int)fn->arity);
             }
 
             ++frame->ip;
@@ -1313,7 +1313,7 @@ frame_start:;
 
             if (fn->arity >= 0 && num_args != (uint32_t)fn->arity)
             {
-              BF_RUNTIME_ERROR("Function<native> called with %i arguments but requires %i.\n", (int)num_args, (int)fn->arity);
+              BF_RUNTIME_ERROR("Function<native> called with %i arguments but requires %i.", (int)num_args, (int)fn->arity);
             }
 
             BifrostVMStackFrame* const native_frame = bfVM_pushCallFrame(self, NULL, new_stack);
@@ -1326,12 +1326,12 @@ frame_start:;
           }
           else
           {
-            BF_RUNTIME_ERROR("Not a callable value.\n");
+            BF_RUNTIME_ERROR("Not a callable value.");
           }
         }
         else
         {
-          BF_RUNTIME_ERROR("Not a pointer value to call.\n");
+          BF_RUNTIME_ERROR("Not a pointer value to call.");
         }
         break;
       }
@@ -1373,7 +1373,7 @@ frame_start:;
 
         if (!bfVMValue_isNumber(lhs) || !bfVMValue_isNumber(rhs))
         {
-          BF_RUNTIME_ERROR("Subtraction is not allowed on non number values.\n");
+          BF_RUNTIME_ERROR("Subtraction is not allowed on non number values.");
         }
 
         locals[regs[REG_RA]] = bfVMValue_sub(lhs, rhs);
@@ -1449,7 +1449,7 @@ frame_start:;
       }
       default:
       {
-        BF_RUNTIME_ERROR("Invalid OP: %i\n", (int)op);
+        BF_RUNTIME_ERROR("Invalid OP: %i", (int)op);
       }
     }
 

@@ -137,13 +137,15 @@ static void errorHandler(BifrostVM* /*vm*/, BifrostVMError err, int line_no, con
       break;
     case BIFROST_VM_ERROR_STACK_TRACE_BEGIN:
       err_type_str = "Trace Bgn";
-      break;
+      std::printf("%s\n", err_type_str);
+      return;
     case BIFROST_VM_ERROR_STACK_TRACE:
-      err_type_str = "STACK";
+      err_type_str = "  STACK";
       break;
     case BIFROST_VM_ERROR_STACK_TRACE_END:
       err_type_str = "Trace End";
-      break;
+      std::printf("%s\n", err_type_str);
+      return;
     case BIFROST_VM_ERROR_NONE:
       err_type_str = "none";
       break;
