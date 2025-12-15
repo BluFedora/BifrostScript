@@ -38,9 +38,4 @@ int  LibC_memcmp(const void* const lhs, const void* const rhs, const size_t leng
 void LibC_memmove(void* const dst, const void* const src, const size_t size);
 void LibC_memset(void* const dst, const int value, const size_t size);
 
-/* custom */
-
-typedef char*            BifrostString;
-typedef struct BifrostVM BifrostVM;
-
 #endif /* BIFROST_LIBC_H */

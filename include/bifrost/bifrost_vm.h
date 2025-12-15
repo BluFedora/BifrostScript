@@ -64,12 +64,6 @@ typedef uint64_t                   BifrostValue; /*!< The Nan-Tagged value repre
 #define InvalidDefaultCase \
   default: break;
 
-/// NOTE(Shareef):
-///   The memory layout: [BifrostStringHeader (capacity | length) | BifrostString (char*)]
-///   A 'BifrostString' can be used anywhere a 'normal' C string can be used.
-typedef char*       BifrostString;
-typedef const char* ConstBifrostString;
-
 /*!
  * @brief
  *   Signature of a native C function the vm can call.
@@ -1068,10 +1062,10 @@ BF_VM_API const char* bfVM_buildInSymbolStr(const BifrostVM* self, BifrostVMBuil
  * @param self
  *   The vm the error happened on.
  *
- * @return ConstBifrostString
+ * @return const char*
  *   A user friendly string of the last error to occur. (NUL terminated)
  */
-BF_VM_API ConstBifrostString bfVM_errorString(const BifrostVM* self);
+BF_VM_API const char* bfVM_errorString(const BifrostVM* self);
 
 /*!
  * @brief
@@ -1086,11 +1080,11 @@ BF_VM_API void bfVM_dtor(BifrostVM* self);
  * @brief
  *   Sets last error message + calls the error callback.
  */
-#define bfVM_SetLastError(error_type, vm, line_no, fmt, ...)                     \
-  String_Fmt(vm, vm->last_error, (fmt), ##__VA_ARGS__);                          \
-  if ((vm)->params.error_fn != NULL)                                             \
-  {                                                                              \
-    (vm)->params.error_fn((vm), error_type, (line_no), (vm)->last_error->value); \
+#define bfVM_SetLastError(error_type, vm, line_no, fmt, ...)                   \
+  String_Fmt(vm, vm->last_error, (fmt), ##__VA_ARGS__);                        \
+  if ((vm)->params.error_fn != NULL)                                           \
+  {                                                                            \
+    (vm)->params.error_fn((vm), error_type, (line_no), (vm)->last_error->str); \
   }
 
 #if __cplusplus

@@ -760,10 +760,10 @@ const char* bfVM_stackReadString(const BifrostVM* self, size_t idx, size_t* out_
 
   if (out_size)
   {
-    *out_size = BifrostString_length(str);
+    *out_size = String_length(str);
   }
 
-  return str->value;
+  return str->str;
 }
 
 double bfVM_stackReadNumber(const BifrostVM* self, size_t idx)
@@ -1006,18 +1006,18 @@ static void bfVM_popAllCallFrames(BifrostVM* self, const BifrostVMStackFrame* re
   if (error_fn)
   {
     error_fn(self, BIFROST_VM_ERROR_STACK_TRACE_BEGIN, -1, "");
-    error_fn(self, BIFROST_VM_ERROR_STACK_TRACE, -1, self->last_error->value);
+    error_fn(self, BIFROST_VM_ERROR_STACK_TRACE, -1, self->last_error->str);
 
     for (size_t i = num_frames; i < total_frames; ++i)
     {
       const BifrostVMStackFrame* frame    = &self->frames[i];
       const BifrostObjFn* const  fn       = frame->fn;
       const int                  line_num = fn ? fn->code_to_line[frame->ip - fn->instructions] : -1;
-      const string_range         fn_name  = fn ? BifrostString_AsStrRng(fn->name) : MakeString("<native>");
+      const string_range         fn_name  = fn ? String_AsStrRng(fn->name) : MakeString("<native>");
 
       String_Fmt(self, self->last_error, "[{}] Stack Frame Line({}): {}", fmt_Uint(i), fmt_Sint(line_num), fmt_Str(fn_name));
 
-      error_fn(self, BIFROST_VM_ERROR_STACK_TRACE, line_num, self->last_error->value);
+      error_fn(self, BIFROST_VM_ERROR_STACK_TRACE, line_num, self->last_error->str);
     }
 
     error_fn(self, BIFROST_VM_ERROR_STACK_TRACE_END, -1, "");
@@ -1083,7 +1083,7 @@ frame_start:;
         {
           char error_buffer[512];
           bfDbg_ValueToString(obj_value, error_buffer, sizeof(error_buffer));
-          BF_RUNTIME_ERROR("Cannot load symbol ({}) from non object {}", fmt_Str(BifrostString_AsStrRng(symbol_str)), fmt_Str(MakeString(error_buffer)));
+          BF_RUNTIME_ERROR("Cannot load symbol ({}) from non object {}", fmt_Str(String_AsStrRng(symbol_str)), fmt_Str(MakeString(error_buffer)));
         }
 
         BifrostObj* obj = bfVMValue_asPointer(obj_value);
@@ -1133,25 +1133,25 @@ frame_start:;
 
           if (!found_field)
           {
-            BF_RUNTIME_ERROR("'{}::{}' is not defined (also not found in any base class).", fmt_Str(MakeString(original_clz->name)), fmt_Str(BifrostString_AsStrRng(self->symbols[symbol])));
+            BF_RUNTIME_ERROR("'{}::{}' is not defined (also not found in any base class).", fmt_Str(String_AsStrRng(original_clz->name)), fmt_Str(String_AsStrRng(self->symbols[symbol])));
           }
         }
         else if (obj->type == BIFROST_VM_OBJ_MODULE)
         {
           BifrostObjModule* module = (BifrostObjModule*)obj;
 
-          locals[regs[REG_RA]] = bfVM_stackFindVariable(module, symbol_str->value, BifrostString_length(symbol_str));
+          locals[regs[REG_RA]] = bfVM_stackFindVariable(module, symbol_str->str, String_length(symbol_str));
         }
         else
         {
-          BF_RUNTIME_ERROR("({}) ERROR, loading a symbol ({}) on a non instance obj.", fmt_Uint(obj->type), fmt_Str(BifrostString_AsStrRng(self->symbols[symbol])));
+          BF_RUNTIME_ERROR("({}) ERROR, loading a symbol ({}) on a non instance obj.", fmt_Uint(obj->type), fmt_Str(String_AsStrRng(self->symbols[symbol])));
         }
         break;
       }
       case BIFROST_VM_OP_STORE_SYMBOL:
       {
         const BifrostObjStr* const sym_str   = self->symbols[regs[REG_RB]];
-        const int                  err_store = bfVM__stackStoreVariable(self, locals[regs[REG_RA]], BifrostString_AsStrRng(sym_str), locals[regs[REG_RC]]);
+        const int                  err_store = bfVM__stackStoreVariable(self, locals[regs[REG_RA]], String_AsStrRng(sym_str), locals[regs[REG_RC]]);
 
         if (err_store)
         {
@@ -1267,7 +1267,7 @@ frame_start:;
 
                 if (call_obj->type != BIFROST_VM_OBJ_FUNCTION && call_obj->type != BIFROST_VM_OBJ_NATIVE_FN)
                 {
-                  BF_RUNTIME_ERROR("'%s::call' must be defined as a function to use instance as function.", fmt_Str(MakeString(clz->name)));
+                  BF_RUNTIME_ERROR("'%s::call' must be defined as a function to use instance as function.", fmt_Str(String_AsStrRng(clz->name)));
                 }
 
                 if (bfVM_ensureStackspace(self, num_args + (size_t)1, locals + ra))
@@ -1285,12 +1285,12 @@ frame_start:;
               }
               else
               {
-                BF_RUNTIME_ERROR("'{}::call' must be defined as a function to use instance as function.", fmt_Str(MakeString(clz->name)));
+                BF_RUNTIME_ERROR("'{}::call' must be defined as a function to use instance as function.", fmt_Str(String_AsStrRng(clz->name)));
               }
             }
             else
             {
-              BF_RUNTIME_ERROR("{} does not define a 'call' function.", fmt_Str(MakeString(clz->name)));
+              BF_RUNTIME_ERROR("{} does not define a 'call' function.", fmt_Str(String_AsStrRng(clz->name)));
             }
           }
 
@@ -1300,7 +1300,7 @@ frame_start:;
 
             if (fn->arity >= 0 && num_args != (size_t)fn->arity)
             {
-              BF_RUNTIME_ERROR("Function ({}) called with {} argument(s) but requires {}.", fmt_Str(BifrostString_AsStrRng(fn->name)), fmt_Sint(num_args), fmt_Sint(fn->arity));
+              BF_RUNTIME_ERROR("Function ({}) called with {} argument(s) but requires {}.", fmt_Str(String_AsStrRng(fn->name)), fmt_Sint(num_args), fmt_Sint(fn->arity));
             }
 
             ++frame->ip;
@@ -1569,9 +1569,9 @@ const char* bfVM_buildInSymbolStr(const BifrostVM* self, BifrostVMBuildInSymbol 
   return k_EnumToString[symbol];
 }
 
-ConstBifrostString bfVM_errorString(const BifrostVM* self)
+const char* bfVM_errorString(const BifrostVM* self)
 {
-  return self->last_error->value;
+  return self->last_error->str;
 }
 
 void bfVM_dtor(BifrostVM* self)
@@ -1712,7 +1712,7 @@ BifrostObjModule* bfVM_importModule(BifrostVM* self, const char* from, const cha
         .source_len = 0u,
        };
 
-      module_fn(self, from, module_name->value, &look_up);
+      module_fn(self, from, module_name->str, &look_up);
 
       if (look_up.source && look_up.source_len)
       {

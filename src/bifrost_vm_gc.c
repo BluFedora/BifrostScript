@@ -392,7 +392,9 @@ static void bfGCMarkObj(BifrostObj* obj, uint8_t mark_value)
     {
       case BIFROST_VM_OBJ_MODULE:
       {
-        BifrostObjModule* module = (BifrostObjModule*)obj;
+        BifrostObjModule* const module = (BifrostObjModule*)obj;
+
+        bfGCMarkObj(&module->name->super, mark_value);
         bfGCMarkSymbols(module->variables, mark_value);
 
         if (module->init_fn.name)
@@ -411,6 +413,7 @@ static void bfGCMarkObj(BifrostObj* obj, uint8_t mark_value)
           bfGCMarkObj(&clz->base_clz->super, mark_value);
         }
 
+        bfGCMarkObj(&clz->name->super, mark_value);
         bfGCMarkObj(&clz->module->super, mark_value);
         bfGCMarkSymbols(clz->symbols, mark_value);
         bfGCMarkSymbols(clz->field_initializers, mark_value);

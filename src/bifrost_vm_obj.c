@@ -15,18 +15,7 @@
 
 #include "bifrost_vm_gc.h"  // Allocation Functions
 
-typedef struct BifrostStringHeader
-{
-  size_t capacity;
-  size_t length;
-
-} BifrostStringHeader;
-
-static size_t StringAllocationSize(size_t capacity)
-{
-  return sizeof(BifrostStringHeader) + capacity;
-}
-
+#if 0
 static BifrostString bfVMString_newLen(struct BifrostVM* vm, const char* initial_data, size_t string_length)
 {
   const size_t str_capacity = string_length + 1;
@@ -58,11 +47,6 @@ static BifrostString bfVMString_newLen(struct BifrostVM* vm, const char* initial
   return NULL;
 }
 
-BifrostStringHeader* bfVMString_getHeader(ConstBifrostString self)
-{
-  return ((BifrostStringHeader*)(self)) - 1;
-}
-
 static size_t bfVMString_length(ConstBifrostString self)
 {
   return bfVMString_getHeader(self)->length;
@@ -74,6 +58,7 @@ static void bfVMString_delete(struct BifrostVM* vm, BifrostString self)
 
   bfGC_AllocMemory(vm, header, StringAllocationSize(header->capacity), 0u);
 }
+#endif
 
 static uint32_t BifrostString_Hash(const char* str, size_t length)
 {
@@ -110,7 +95,7 @@ static unsigned char EscapeConvert(const unsigned char c)
   }
 }
 
-static size_t CString_unescape(char* str)
+static uint32_t CString_unescape(char* str)
 {
   const char* oldStr = str;
   char*       newStr = str;
@@ -131,12 +116,12 @@ static size_t CString_unescape(char* str)
 
   *newStr = '\0';
 
-  return (newStr - str);
+  return (uint32_t)(newStr - str);
 }
 
-static void bfVMString_unescape(BifrostString self)
+static void bfVMString_unescape(BifrostObjStr* const self)
 {
-  bfVMString_getHeader(self)->length = CString_unescape(self);
+  self->length = CString_unescape(self->str);
 }
 
 inline static void SetupGCObject(BifrostObj* obj, BifrostObjType type, BifrostObj** next)
@@ -168,7 +153,7 @@ BifrostObjModule* bfObj_NewModule(struct BifrostVM* self, string_range name)
 {
   BifrostObjModule* const module = AllocateVMObject(BifrostObjModule, self, BIFROST_VM_OBJ_MODULE);
 
-  module->name      = bfVMString_newLen(self, name.str_bgn, name.str_len);
+  module->name      = bfObj_NewString(self, name);
   module->variables = bfVMArray_new(self, module->variables, 32);
   LibC_memset(&module->init_fn, 0x0, sizeof(module->init_fn));
   module->init_fn.module = module;
@@ -182,7 +167,7 @@ BifrostObjClass* bfObj_NewClass(struct BifrostVM* self, BifrostObjModule* module
 {
   BifrostObjClass* const clz = AllocateVMObject(BifrostObjClass, self, BIFROST_VM_OBJ_CLASS);
 
-  clz->name               = bfVMString_newLen(self, name.str_bgn, name.str_len);
+  clz->name               = bfObj_NewString(self, name);
   clz->base_clz           = base_clz;
   clz->module             = module;
   clz->symbols            = bfVMArray_new(self, clz->symbols, 32);
@@ -238,11 +223,20 @@ BifrostObjNativeFn* bfObj_NewNativeFn(struct BifrostVM* self, bfNativeFnT fn_ptr
 
 BifrostObjStr* bfObj_NewString(struct BifrostVM* self, string_range value)
 {
+  // TODO(SR): Combine the memory allocation of the string and object, string must be immutable for that aka String_FmtImpl makes a new string.
   BifrostObjStr* const obj = AllocateVMObject(BifrostObjStr, self, BIFROST_VM_OBJ_STRING);
 
-  obj->value = bfVMString_newLen(self, value.str_bgn, value.str_len);
-  bfVMString_unescape(obj->value);
-  obj->hash = BifrostString_Hash(obj->value, bfVMString_length(obj->value));
+  self->gc_is_running = true;  // TODO(SR): Remove this hack.
+
+  obj->str = bfGC_AllocMemory(self, NULL, 0u, value.str_len + 1);
+  LibC_memcpy(obj->str, value.str_bgn, value.str_len);
+  obj->str[value.str_len] = '\0';
+  obj->length             = (uint32_t)value.str_len;
+  obj->capacity           = obj->length;
+  bfVMString_unescape(obj);
+  obj->hash = BifrostString_Hash(obj->str, obj->length);
+
+  self->gc_is_running = false;
 
   return obj;
 }
@@ -317,7 +311,7 @@ void bfObj_Destruct(struct BifrostVM* self, BifrostObj* obj)
     case BIFROST_VM_OBJ_MODULE:
     {
       BifrostObjModule* const module = (BifrostObjModule*)obj;
-      bfVMString_delete(self, module->name);
+
       bfVMArray_delete(self, &module->variables);
       if (module->init_fn.name)
       {
@@ -329,7 +323,6 @@ void bfObj_Destruct(struct BifrostVM* self, BifrostObj* obj)
     {
       BifrostObjClass* const clz = (BifrostObjClass*)obj;
 
-      bfVMString_delete(self, clz->name);
       bfVMArray_delete(self, &clz->symbols);
       bfVMArray_delete(self, &clz->field_initializers);
       break;
@@ -345,7 +338,6 @@ void bfObj_Destruct(struct BifrostVM* self, BifrostObj* obj)
     {
       BifrostObjFn* const fn = (BifrostObjFn*)obj;
 
-      bfObj_Delete(self, &fn->name->super);
       bfVMArray_delete(self, &fn->constants);
       bfVMArray_delete(self, &fn->instructions);
       bfVMArray_delete(self, &fn->code_to_line);
@@ -354,7 +346,7 @@ void bfObj_Destruct(struct BifrostVM* self, BifrostObj* obj)
     case BIFROST_VM_OBJ_STRING:
     {
       BifrostObjStr* const str = (BifrostObjStr*)obj;
-      bfVMString_delete(self, str->value);
+      bfGC_AllocMemory(self, str->str, str->capacity + 1, 0u);
       break;
     }
     case BIFROST_VM_OBJ_NATIVE_FN:
@@ -563,10 +555,9 @@ StringCmp StringCmp_Make(const char* const str, const size_t length)
   return (StringCmp){.str = str, .length = (uint32_t)length, .hash = BifrostString_Hash(str, length)};
 }
 
-StringCmp StringCmp_FromStr(ConstBifrostString self) { return StringCmp_Make(self, bfVMString_length(self)); }
 StringCmp StringCmp_FromBStr(const BifrostObjStr* self)
 {
-  return (StringCmp){.str = self->value, .length = (uint32_t)BifrostString_length(self), .hash = self->hash};
+  return (StringCmp){.str = self->str, .length = (uint32_t)String_length(self), .hash = self->hash};
 }
 StringCmp StringCmp_FromStrView(const string_range self) { return StringCmp_Make(self.str_bgn, self.str_len); }
 
@@ -575,62 +566,38 @@ bool StringCmp_Cmp(const StringCmp lhs, const StringCmp rhs)
   return lhs.hash == rhs.hash && lhs.length == rhs.length && LibC_memcmp(lhs.str, rhs.str, lhs.length) == 0;
 }
 
-BifrostStringHeader* bfVMString_getHeader(ConstBifrostString self);
-
-size_t BifrostString_length(const BifrostObjStr* self)
+static void bfVMString_reserve(struct BifrostVM* vm, BifrostObjStr* self, size_t new_capacity)
 {
-  return bfVMString_length(self->value);
-}
-
-string_range BifrostString_AsStrRng2(const BifrostString self)
-{
-  return MakeStringLen(self, bfVMString_length(self));
-}
-
-static void bfVMString_reserve(struct BifrostVM* vm, BifrostString* self, size_t new_capacity)
-{
-  BifrostStringHeader* header = bfVMString_getHeader(*self);
-
-  if (new_capacity > header->capacity)
+  if (new_capacity > self->capacity)
   {
-    const size_t old_capacity = header->capacity;
+    const size_t old_capacity = self->capacity;
 
-    while (header->capacity < new_capacity)
+    if (self->capacity == 0)
     {
-      header->capacity *= 2;
+      self->capacity = 16;
+    }
+
+    while (self->capacity < new_capacity)
+    {
+      self->capacity *= 2;
     }
 
     vm->gc_is_running = true;
-
-    header = (BifrostStringHeader*)bfGC_AllocMemory(vm, header, StringAllocationSize(old_capacity), StringAllocationSize(header->capacity));
-
-    if (header)
-    {
-      *self = (char*)header + sizeof(BifrostStringHeader);
-    }
-    else
-    {
-      bfVMString_delete(vm, *self);
-      *self = NULL;
-    }
-
+    self->str         = bfGC_AllocMemory(vm, self->str, old_capacity + 1, self->capacity);
     vm->gc_is_running = false;
   }
 }
 
 inline static void String_FmtPush(BifrostVM* const vm, BifrostObjStr* const str, const char c)
 {
-  BifrostStringHeader* header = bfVMString_getHeader(str->value);
-
-  if (header->length == header->capacity)
+  if (str->length == str->capacity)
   {
-    const size_t new_capacity = header->capacity == 0 ? 16 : header->capacity * 2;
+    const size_t new_capacity = str->capacity == 0 ? 16 : str->capacity * 2;
 
-    bfVMString_reserve(vm, &str->value, new_capacity);
-    header = bfVMString_getHeader(str->value);
+    bfVMString_reserve(vm, str, new_capacity);
   }
 
-  str->value[header->length++] = c;
+  str->str[str->length++] = c;
 }
 
 inline static void String_FmtU64(BifrostVM* const vm, BifrostObjStr* const str, uint64_t value, const bool prefix_sign, const uint64_t base, const bool upper_case)
@@ -735,7 +702,7 @@ void String_FmtImpl(BifrostVM* const vm, BifrostObjStr* const str, const char* c
   size_t fmt_arg_index  = 0;
   bool   has_escape_seq = false;
 
-  bfVMString_getHeader(str->value)->length = 0;
+  str->length = 0;
 
   // TODO(SR):
   //  - Optimize for batch pushing by keeping track of non arg string parts.
@@ -831,7 +798,7 @@ void String_FmtImpl(BifrostVM* const vm, BifrostObjStr* const str, const char* c
 
   if (has_escape_seq)
   {
-    bfVMString_unescape(str->value);
+    bfVMString_unescape(str);
   }
-  str->hash = BifrostString_Hash(str->value, bfVMString_length(str->value));
+  str->hash = BifrostString_Hash(str->str, str->length);
 }

@@ -564,7 +564,7 @@ void bfParser_ctor(BifrostParser* const self, struct BifrostVM* vm, BifrostLexer
   self->loop_stack       = NULL;
   self->vm               = vm;
   self->current_module   = current_module;
-  bfParser_pushBuilder(self, BifrostString_AsStrRng2(current_module->name));
+  bfParser_pushBuilder(self, String_AsStrRng(current_module->name));
 }
 
 bool bfParser_compile(BifrostParser* const self)
@@ -730,7 +730,7 @@ static void parseImport(BifrostParser* const self)
   const string_range name_str   = name_token.str_range;
   bfParser_eat(self, BIFROST_TOKEN_CONST_STR, false, "Import statements must be followed by a constant string.");
 
-  BifrostObjModule* const imported_module = bfVM_importModule(self->vm, self->current_module->name, name_str.str_bgn, name_str.str_len);
+  BifrostObjModule* const imported_module = bfVM_importModule(self->vm, self->current_module->name->str, name_str.str_bgn, name_str.str_len);
 
   if (imported_module == NULL)
   {
@@ -775,7 +775,7 @@ static void parseImport(BifrostParser* const self)
       // TODO(SR): The way symbols are stored is dumb and leaves lots of empty slots.
       if (!bfVMValue_isNull(module_symbol->value))
       {
-        const string_range variable_name = BifrostString_AsStrRng(module_symbol->name);
+        const string_range variable_name = String_AsStrRng(module_symbol->name);
 
         bfVM_xSetVariable(&self->current_module->variables, self->vm, variable_name, module_symbol->value);
       }

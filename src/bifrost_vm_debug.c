@@ -48,7 +48,7 @@ size_t bfDbg_ValueToString(BifrostValue value, char* buffer, size_t buffer_size)
       {
         const BifrostObjFn* const obj_fn = (const BifrostObjFn*)obj;
 
-        return (size_t)snprintf(buffer, buffer_size, "<fn %s>", obj_fn->name->value);
+        return (size_t)snprintf(buffer, buffer_size, "<fn %s>", obj_fn->name->str);
       }
       case BIFROST_VM_OBJ_MODULE:
       {
@@ -58,7 +58,7 @@ size_t bfDbg_ValueToString(BifrostValue value, char* buffer, size_t buffer_size)
       {
         const BifrostObjClass* const obj_clz = (const BifrostObjClass*)obj;
 
-        return (size_t)snprintf(buffer, buffer_size, "<class %s>", obj_clz->name);
+        return (size_t)snprintf(buffer, buffer_size, "<class %s>", obj_clz->name->str);
       }
       case BIFROST_VM_OBJ_INSTANCE:
       {
@@ -68,7 +68,7 @@ size_t bfDbg_ValueToString(BifrostValue value, char* buffer, size_t buffer_size)
       {
         const BifrostObjStr* const obj_string = (const BifrostObjStr*)obj;
 
-        return (size_t)snprintf(buffer, buffer_size, "%s", obj_string->value);
+        return (size_t)snprintf(buffer, buffer_size, "%s", obj_string->str);
       }
       case BIFROST_VM_OBJ_NATIVE_FN:
       {
@@ -78,7 +78,7 @@ size_t bfDbg_ValueToString(BifrostValue value, char* buffer, size_t buffer_size)
       {
         const BifrostObjReference* const obj_ref = (const BifrostObjReference*)obj;
 
-        return (size_t)snprintf(buffer, buffer_size, "<obj reference class(%s)>", obj_ref->clz ? obj_ref->clz->name : "null");
+        return (size_t)snprintf(buffer, buffer_size, "<obj reference class(%s)>", obj_ref->clz ? obj_ref->clz->name->str : "null");
       }
       case BIFROST_VM_OBJ_NATIVE_WEAK_REF:
       {
@@ -116,7 +116,7 @@ size_t bfDbg_ValueTypeToString(BifrostValue value, char* buffer, size_t buffer_s
       {
         const BifrostObjFn* const obj_fn = (const BifrostObjFn*)obj;
 
-        return (size_t)snprintf(buffer, buffer_size, "<fn %s>", obj_fn->name->value);
+        return (size_t)snprintf(buffer, buffer_size, "<fn %s>", obj_fn->name->str);
       }
       case BIFROST_VM_OBJ_MODULE:
       {
@@ -126,7 +126,7 @@ size_t bfDbg_ValueTypeToString(BifrostValue value, char* buffer, size_t buffer_s
       {
         const BifrostObjClass* const obj_clz = (const BifrostObjClass*)obj;
 
-        return (size_t)snprintf(buffer, buffer_size, "<Class %s>", obj_clz->name);
+        return (size_t)snprintf(buffer, buffer_size, "<Class %s>", obj_clz->name->str);
       }
       case BIFROST_VM_OBJ_INSTANCE:
       {
@@ -216,7 +216,7 @@ void bfDbg_DisassembleFunction(int indent, const BifrostObjFn* function)
   const size_t needed_stack_space = function->needed_stack_space;
 
   bfDbgIndentPrint(indent + 0);
-  printf("Function(%s, arity = %i, stack_space = %i, module = '%s'):\n", function->name->value, function->arity, (int)needed_stack_space, function->module->name);
+  printf("Function(%s, arity = %i, stack_space = %i, module = '%s'):\n", function->name->str, function->arity, (int)needed_stack_space, function->module->name->str);
 
   bfDbgIndentPrint(indent + 1);
   printf("Constants(%i):\n", (int)num_constants);

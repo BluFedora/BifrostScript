@@ -57,12 +57,11 @@ typedef struct BifrostObj
 
 typedef struct BifrostObjStr
 {
-  BifrostObj    super;
-  BifrostString value;
-  // char*         str;
-  // uint32_t      capacity;
-  // uint32_t      length;
-  uint32_t hash;
+  BifrostObj super;
+  char*      str;
+  uint32_t   capacity;
+  uint32_t   length;
+  uint32_t   hash;
 
 } BifrostObjStr;
 
@@ -82,7 +81,7 @@ typedef struct BifrostObjFn
 typedef struct BifrostObjModule
 {
   BifrostObj       super;
-  BifrostString    name;
+  BifrostObjStr*   name;
   BifrostVMSymbol* variables;
   BifrostObjFn     init_fn;
 
@@ -91,7 +90,7 @@ typedef struct BifrostObjModule
 typedef struct BifrostObjClass
 {
   BifrostObj              super;
-  BifrostString           name;
+  BifrostObjStr*          name;
   struct BifrostObjClass* base_clz;
   BifrostObjModule*       module;  // TODO(SR): Remove me, only needed for dumb API decision....
   BifrostVMSymbol*        symbols;
@@ -192,17 +191,18 @@ typedef struct StringCmp
 } StringCmp;
 
 StringCmp StringCmp_Make(const char* const str, const size_t length);
-StringCmp StringCmp_FromStr(ConstBifrostString self);
 StringCmp StringCmp_FromBStr(const BifrostObjStr* self);
 StringCmp StringCmp_FromStrView(const string_range self);
 bool      StringCmp_Cmp(const StringCmp lhs, const StringCmp rhs);
 
-size_t       BifrostString_length(const BifrostObjStr* self);
-string_range BifrostString_AsStrRng2(const BifrostString self);
-
-inline string_range BifrostString_AsStrRng(const BifrostObjStr* self)
+inline size_t String_length(const BifrostObjStr* self)
 {
-  return MakeStringLen(self->value, BifrostString_length(self));
+  return self->length;
+}
+
+inline string_range String_AsStrRng(const BifrostObjStr* self)
+{
+  return MakeStringLen(self->str, String_length(self));
 }
 
 /* hash-map */
