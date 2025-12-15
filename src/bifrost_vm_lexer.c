@@ -154,7 +154,9 @@ static bfToken bfLexer_parseNumber(BifrostLexer* self)
     bfLexer_advance(self, 1);
   }
 
-  return BIFROST_TOKEN_MAKE_NUM(value);
+  const size_t str_length = end - bgn;
+
+  return BIFROST_TOKEN_MAKE_NUM(bgn, str_length, value);
 }
 
 static bool bfLexer_isID(char c)

@@ -171,8 +171,8 @@ bfToken      bfLexer_nextToken(BifrostLexer* self);
 #define BIFROST_TOKEN_MAKE_STR(t, s) \
   (bfToken) BIFROST_TOKEN_MAKE_ARRAY_INIT(t, s)
 
-#define BIFROST_TOKEN_MAKE_NUM(v) \
-  (bfToken) { .type = BIFROST_TOKEN_CONST_REAL, .num = v }
+#define BIFROST_TOKEN_MAKE_NUM(s, e, v) \
+  (bfToken) { .type = BIFROST_TOKEN_CONST_REAL, .str_range = {s, e}, .num = v }
 
 #if __cplusplus
 }

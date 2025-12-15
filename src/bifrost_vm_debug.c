@@ -254,15 +254,5 @@ void bfDbg_PrintToken(const bfToken* token)
 {
   const char* const type_str = bfDbg_TokenTypeToString(token->type);
 
-  printf("[%30s] => ", type_str);
-  if (token->type == BIFROST_TOKEN_CONST_REAL)
-  {
-    printf("[%g]", token->num);
-  }
-  else
-  {
-    printf("[%.*s]", (int)token->str_range.str_len, token->str_range.str_bgn);
-  }
-
-  printf("\n");
+  printf("[%30s] => [%.*s]\n", type_str, (int)token->str_range.str_len, token->str_range.str_bgn);
 }
