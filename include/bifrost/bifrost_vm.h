@@ -1087,7 +1087,7 @@ BF_VM_API void bfVM_dtor(BifrostVM* self);
  *   Sets last error message + calls the error callback.
  */
 #define bfVM_SetLastError(error_type, vm, line_no, fmt, ...)                     \
-  bfVMString_sprintf(vm, &vm->last_error->value, (fmt), ##__VA_ARGS__);          \
+  String_Fmt(vm, vm->last_error, (fmt), ##__VA_ARGS__);                          \
   if ((vm)->params.error_fn != NULL)                                             \
   {                                                                              \
     (vm)->params.error_fn((vm), error_type, (line_no), (vm)->last_error->value); \

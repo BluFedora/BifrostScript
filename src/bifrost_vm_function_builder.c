@@ -96,7 +96,7 @@ uint16_t bfFuncBuilder_declVariable(BifrostVMFunctionBuilder* self, const char* 
   uint16_t prev_decl;
   if (bfFuncBuilder__getVariable(self, name, length, true, &prev_decl))
   {
-    bfVM_SetLastError(BIFROST_VM_ERROR_COMPILE, self->vm, (int)*self->current_line_no, "ERROR: [%.*s] already declared.\n", (int)length, name);
+    bfVM_SetLastError(BIFROST_VM_ERROR_COMPILE, self->vm, (int)*self->current_line_no, "ERROR: [{}] already declared.\n", fmt_Str(MakeStringLen(name, length)));
     return (uint32_t)prev_decl;
   }
   else

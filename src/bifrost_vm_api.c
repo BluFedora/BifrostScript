@@ -1013,9 +1013,9 @@ static void bfVM_popAllCallFrames(BifrostVM* self, const BifrostVMStackFrame* re
       const BifrostVMStackFrame* frame    = &self->frames[i];
       const BifrostObjFn* const  fn       = frame->fn;
       const int                  line_num = fn ? fn->code_to_line[frame->ip - fn->instructions] : -1;
-      const char* const          fn_name  = fn ? fn->name->value : "<native>";
+      const string_range         fn_name  = fn ? BifrostString_AsStrRng(fn->name) : MakeString("<native>");
 
-      bfVMString_sprintf(self, &self->last_error->value, "[%zu] Stack Frame Line(%u): %s", i, (unsigned)line_num, fn_name);
+      String_Fmt(self, self->last_error, "[{}] Stack Frame Line({}): {}", fmt_Uint(i), fmt_Sint(line_num), fmt_Str(fn_name));
 
       error_fn(self, BIFROST_VM_ERROR_STACK_TRACE, line_num, self->last_error->value);
     }
@@ -1040,8 +1040,8 @@ static BifrostVMError bfVM_execTopFrame(BifrostVM* self, BifrostObjFn* fn_to_run
   const BifrostVMStackFrame* const reference_frame = bfVMArray_back(&self->frames);
   BifrostVMError                   err             = BIFROST_VM_ERROR_NONE;
 
-#define BF_RUNTIME_ERROR(...)                                      \
-  bfVMString_sprintf(self, &self->last_error->value, __VA_ARGS__); \
+#define BF_RUNTIME_ERROR(fmt, ...)                        \
+  String_Fmt(self, self->last_error, (fmt), __VA_ARGS__); \
   goto runtime_error
 
 /*
@@ -1083,7 +1083,7 @@ frame_start:;
         {
           char error_buffer[512];
           bfDbg_ValueToString(obj_value, error_buffer, sizeof(error_buffer));
-          BF_RUNTIME_ERROR("Cannot load symbol (%s) from non object %s", symbol_str->value, error_buffer);
+          BF_RUNTIME_ERROR("Cannot load symbol ({}) from non object {}", fmt_Str(BifrostString_AsStrRng(symbol_str)), fmt_Str(MakeString(error_buffer)));
         }
 
         BifrostObj* obj = bfVMValue_asPointer(obj_value);
@@ -1133,7 +1133,7 @@ frame_start:;
 
           if (!found_field)
           {
-            BF_RUNTIME_ERROR("'%s::%s' is not defined (also not found in any base class).", original_clz->name, self->symbols[symbol]->value);
+            BF_RUNTIME_ERROR("'{}::{}' is not defined (also not found in any base class).", fmt_Str(MakeString(original_clz->name)), fmt_Str(BifrostString_AsStrRng(self->symbols[symbol])));
           }
         }
         else if (obj->type == BIFROST_VM_OBJ_MODULE)
@@ -1144,7 +1144,7 @@ frame_start:;
         }
         else
         {
-          BF_RUNTIME_ERROR("(%u) ERROR, loading a symbol (%s) on a non instance obj.", obj->type, self->symbols[symbol]->value);
+          BF_RUNTIME_ERROR("({}) ERROR, loading a symbol ({}) on a non instance obj.", fmt_Uint(obj->type), fmt_Str(BifrostString_AsStrRng(self->symbols[symbol])));
         }
         break;
       }
@@ -1212,7 +1212,7 @@ frame_start:;
             char string_buffer[512];
             bfDbg_ValueTypeToString(value, string_buffer, sizeof(string_buffer));
 
-            BF_RUNTIME_ERROR("Called new on a non Class type (%s).", string_buffer);
+            BF_RUNTIME_ERROR("Called new on a non Class type ({}).", fmt_Str(MakeString(string_buffer)));
           }
         }
         else
@@ -1220,7 +1220,7 @@ frame_start:;
           char string_buffer[512];
           bfDbg_ValueTypeToString(value, string_buffer, sizeof(string_buffer));
 
-          BF_RUNTIME_ERROR("Called new on a non Class type (%s).", string_buffer);
+          BF_RUNTIME_ERROR("Called new on a non Class type ({}).", fmt_Str(MakeString(string_buffer)));
         }
         break;
       }
@@ -1267,7 +1267,7 @@ frame_start:;
 
                 if (call_obj->type != BIFROST_VM_OBJ_FUNCTION && call_obj->type != BIFROST_VM_OBJ_NATIVE_FN)
                 {
-                  BF_RUNTIME_ERROR("'%s::call' must be defined as a function to use instance as function.", clz->name);
+                  BF_RUNTIME_ERROR("'%s::call' must be defined as a function to use instance as function.", fmt_Str(MakeString(clz->name)));
                 }
 
                 if (bfVM_ensureStackspace(self, num_args + (size_t)1, locals + ra))
@@ -1285,12 +1285,12 @@ frame_start:;
               }
               else
               {
-                BF_RUNTIME_ERROR("'%s::call' must be defined as a function to use instance as function.", clz->name);
+                BF_RUNTIME_ERROR("'{}::call' must be defined as a function to use instance as function.", fmt_Str(MakeString(clz->name)));
               }
             }
             else
             {
-              BF_RUNTIME_ERROR("%s does not define a 'call' function.", clz->name);
+              BF_RUNTIME_ERROR("{} does not define a 'call' function.", fmt_Str(MakeString(clz->name)));
             }
           }
 
@@ -1300,7 +1300,7 @@ frame_start:;
 
             if (fn->arity >= 0 && num_args != (size_t)fn->arity)
             {
-              BF_RUNTIME_ERROR("Function (%s) called with %i argument(s) but requires %i.", fn->name, (int)num_args, (int)fn->arity);
+              BF_RUNTIME_ERROR("Function ({}) called with {} argument(s) but requires {}.", fmt_Str(BifrostString_AsStrRng(fn->name)), fmt_Sint(num_args), fmt_Sint(fn->arity));
             }
 
             ++frame->ip;
@@ -1313,7 +1313,7 @@ frame_start:;
 
             if (fn->arity >= 0 && num_args != (uint32_t)fn->arity)
             {
-              BF_RUNTIME_ERROR("Function<native> called with %i arguments but requires %i.", (int)num_args, (int)fn->arity);
+              BF_RUNTIME_ERROR("Function<native> called with {} arguments but requires {}.", fmt_Sint(num_args), fmt_Sint(fn->arity));
             }
 
             BifrostVMStackFrame* const native_frame = bfVM_pushCallFrame(self, NULL, new_stack);
@@ -1362,7 +1362,7 @@ frame_start:;
           const size_t offset = bfDbg_ValueTypeToString(lhs, string_buffer, sizeof(string_buffer));
           bfDbg_ValueTypeToString(rhs, string_buffer + offset + 1, sizeof(string_buffer) - offset - 1);
 
-          BF_RUNTIME_ERROR("'+' operator of two incompatible types (%s + %s).", string_buffer, string_buffer + offset + 1);
+          BF_RUNTIME_ERROR("'+' operator of two incompatible types ({} + {}).", fmt_Str(MakeString(string_buffer)), fmt_Str(MakeString(string_buffer + offset + 1)));
         }
         break;
       }
@@ -1449,7 +1449,7 @@ frame_start:;
       }
       default:
       {
-        BF_RUNTIME_ERROR("Invalid OP: %i", (int)op);
+        BF_RUNTIME_ERROR("Invalid OP: {}", fmt_Uint(op));
       }
     }
 
@@ -1691,6 +1691,8 @@ static BifrostVMError bfVM_compileIntoModule(BifrostVM* self, BifrostObjModule* 
 
 BifrostObjModule* bfVM_importModule(BifrostVM* self, const char* from, const char* name, size_t name_len)
 {
+  const string_range name_range = MakeStringLen(name, name_len);
+
   BifrostObjModule* m = bfVM_findModule(self, name, name_len);
 
   if (!m)
@@ -1699,8 +1701,7 @@ BifrostObjModule* bfVM_importModule(BifrostVM* self, const char* from, const cha
 
     if (module_fn)
     {
-      const string_range name_range  = {.str_bgn = name, .str_len = name_len};
-      BifrostObjStr*     module_name = bfObj_NewString(self, name_range);
+      BifrostObjStr* module_name = bfObj_NewString(self, name_range);
 
       BifrostGCRoot module_name_gc_root;
       bfGC_PushRoot(self, &module_name_gc_root, &module_name->super);
@@ -1733,14 +1734,14 @@ BifrostObjModule* bfVM_importModule(BifrostVM* self, const char* from, const cha
       }
       else
       {
-        bfVMString_sprintf(self, &self->last_error->value, "Failed to find module '%.*s'", name_len, name);
+        String_Fmt(self, self->last_error, "Failed to find module '{}'", fmt_Str(name_range));
       }
 
       bfGC_PopRoot(self);  // module_name
     }
     else
     {
-      bfVMString_sprintf(self, &self->last_error->value, "No module function registered when loading module '%.*s'", name_len, name);
+      String_Fmt(self, self->last_error, "No module function registered when loading module '{}'", fmt_Str(name_range));
     }
   }
 

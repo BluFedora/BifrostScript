@@ -119,8 +119,8 @@ static void bfLexer_skipBlockComment(BifrostLexer* self)
       bfVM_SetLastError(BIFROST_VM_ERROR_LEXER,
                         self->vm,
                         (int)self->current_line_no,
-                        "Unfinished block comment starting on line(%zu)",
-                        line_no);
+                        "Unfinished block comment starting on line({})",
+                        fmt_Uint(line_no));
       break;
     }
 
@@ -421,11 +421,10 @@ bfToken bfLexer_nextToken(BifrostLexer* self)
         bfVM_SetLastError(BIFROST_VM_ERROR_LEXER,
                           self->vm,
                           (int)self->current_line_no,
-                          "Invalid character ('%c') on line %u \"%.*s\"",
-                          current_char,
-                          (unsigned int)self->current_line_no,
-                          (int)line.str_len,
-                          line.str_bgn);
+                          "Invalid character ('{}') on line {} \"{}\"",
+                          fmt_Char(current_char),
+                          fmt_Uint(self->current_line_no),
+                          fmt_Str(line));
 
         bfLexer_advance(self, 1);
         break;

@@ -382,7 +382,7 @@ static inline bool bfParser_eat(BifrostParser* const self, bfTokenType type, boo
     // const char*  expected  = bfDbg_TokenTypeToString(type);
     // const char*  received  = bfDbg_TokenTypeToString(self->current_token.type);
 
-    Parser_EmitError(self, "%s", error_msg);
+    Parser_EmitError(self, "{}", fmt_Str(MakeString(error_msg)));
 
     while (self->current_token.type != BIFROST_TOKEN_SEMI_COLON && self->current_token.type != BIFROST_TOKEN_EOP)
     {
@@ -410,6 +410,11 @@ static inline bool bfParser_is(BifrostParser* const self, bfTokenType type)
 
 static inline GrammarRule typeToRule(const bfTokenType type);
 
+static StrFmt TokenFmt(const bfToken* const token)
+{
+  return fmt_Str(MakeString(bfDbg_TokenTypeToString(token->type)));
+}
+
 // Pratt Parser
 //   [Vaughan Pratt - Top Down Operator Precendence 1973](reference/Vaughan.Pratt.TDOP.pdf | https://tdop.github.io/)
 //
@@ -422,7 +427,7 @@ static void parseExpr(BifrostParser* const self, ExprInfo* expr_loc, const Prece
 
   if (!rule.prefix)
   {
-    Parser_EmitError(self, "No prefix operator for token: %s", bfDbg_TokenTypeToString(token.type));
+    Parser_EmitError(self, "No prefix operator for token: {}", TokenFmt(&token));
     return;
   }
 
@@ -437,7 +442,7 @@ static void parseExpr(BifrostParser* const self, ExprInfo* expr_loc, const Prece
 
     if (!infix)
     {
-      Parser_EmitError(self, "No infix operator for token: %s", bfDbg_TokenTypeToString(token.type));
+      Parser_EmitError(self, "No infix operator for token: {}", TokenFmt(&token));
       return;
     }
 
@@ -729,7 +734,7 @@ static void parseImport(BifrostParser* const self)
 
   if (imported_module == NULL)
   {
-    Parser_EmitError(self, "Failed to import module: '%.*s'", name_str.str_len, name_str.str_bgn);
+    Parser_EmitError(self, "Failed to import module: '{}'", fmt_Str(name_str));
   }
 
   if (bfParser_match(self, BIFROST_TOKEN_CTRL_FOR))
@@ -980,7 +985,7 @@ static void Expr_parseVariable(BifrostParser* const self, ExprInfo* expr, const 
   }
   else
   {
-    Parser_EmitError(self, "Error invalid var(%.*s)", (int)(var_name.str_len), var_name.str_bgn);
+    Parser_EmitError(self, "Error invalid var({})", fmt_Str(var_name));
   }
 }
 
@@ -1003,7 +1008,7 @@ static void Expr_parseBinOp(BifrostParser* const self, ExprInfo* expr_info, cons
     case '&': inst = BIFROST_VM_OP_CMP_AND; break;
     case '<': inst = token->type == BIFROST_TOKEN_CTRL_LE ? BIFROST_VM_OP_CMP_LE : BIFROST_VM_OP_CMP_LT; break;
     case '>': inst = token->type == BIFROST_TOKEN_CTRL_GE ? BIFROST_VM_OP_CMP_GE : BIFROST_VM_OP_CMP_GT; break;
-    default:  Parser_EmitError(self, "Invalid Binary Operator. %.*s", (int)token->str_range.str_len, token->str_range.str_bgn); break;
+    default:  Parser_EmitError(self, "Invalid Binary Operator. {}", fmt_Str(token->str_range)); break;
   }
 
   const uint16_t rhs_loc  = bfFuncBuilder_pushTemp(self->fn_builder, 1);
@@ -1117,7 +1122,7 @@ static void Expr_parseDotOp(BifrostParser* const self, ExprInfo* expr, const Exp
   }
   else
   {
-    Parser_EmitError(self, "(%s) Cannot use the dot operator on non variables.\n", bfDbg_TokenTypeToString(token->type));
+    Parser_EmitError(self, "({}) Cannot use the dot operator on non variables.\n", TokenFmt(token));
   }
 }
 
@@ -1304,22 +1309,12 @@ static void parseClassDecl(BifrostParser* const self)
         }
         else
         {
-          Parser_EmitError(self,
-                           "'%.*s' cannot be used as a base class for '%.*s' (non class type).",
-                           base_name_str.str_len,
-                           base_name_str.str_bgn,
-                           name_str.str_len,
-                           name_str.str_bgn);
+          Parser_EmitError(self, "'{}' cannot be used as a base class for '{}' (non class type).", fmt_Str(base_name_str), fmt_Str(name_str));
         }
       }
       else
       {
-        Parser_EmitError(self,
-                         "'%.*s' cannot be used as a base class for '%.*s' (non class type).",
-                         name_str.str_len,
-                         name_str.str_bgn,
-                         base_name_str.str_len,
-                         base_name_str.str_bgn);
+        Parser_EmitError(self, "'{}' cannot be used as a base class for '{}' (non class type).", fmt_Str(base_name_str), fmt_Str(name_str));
       }
     }
   }
@@ -1375,7 +1370,7 @@ static bool Parser_parseStatement(BifrostParser* const self)
   switch (self->current_token.type)
   {
     default:
-      Parser_EmitError(self, "Unhandled Token (%s)\n", bfDbg_TokenTypeToString(self->current_token.type));
+      Parser_EmitError(self, "Unhandled Token ({})\n", fmt_Str(MakeString(bfDbg_TokenTypeToString(self->current_token.type))));
       bfParser_match(self, self->current_token.type);
     case BIFROST_TOKEN_EOP:
     {

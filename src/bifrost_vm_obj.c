@@ -587,6 +587,37 @@ string_range BifrostString_AsStrRng2(const BifrostString self)
   return MakeStringLen(self, bfVMString_length(self));
 }
 
+static void bfVMString_reserve(struct BifrostVM* vm, BifrostString* self, size_t new_capacity)
+{
+  BifrostStringHeader* header = bfVMString_getHeader(*self);
+
+  if (new_capacity > header->capacity)
+  {
+    const size_t old_capacity = header->capacity;
+
+    while (header->capacity < new_capacity)
+    {
+      header->capacity *= 2;
+    }
+
+    vm->gc_is_running = true;
+
+    header = (BifrostStringHeader*)bfGC_AllocMemory(vm, header, StringAllocationSize(old_capacity), StringAllocationSize(header->capacity));
+
+    if (header)
+    {
+      *self = (char*)header + sizeof(BifrostStringHeader);
+    }
+    else
+    {
+      bfVMString_delete(vm, *self);
+      *self = NULL;
+    }
+
+    vm->gc_is_running = false;
+  }
+}
+
 inline static void String_FmtPush(BifrostVM* const vm, BifrostObjStr* const str, const char c)
 {
   BifrostStringHeader* header = bfVMString_getHeader(str->value);

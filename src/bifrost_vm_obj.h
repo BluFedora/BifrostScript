@@ -197,9 +197,6 @@ StringCmp StringCmp_FromBStr(const BifrostObjStr* self);
 StringCmp StringCmp_FromStrView(const string_range self);
 bool      StringCmp_Cmp(const StringCmp lhs, const StringCmp rhs);
 
-void bfVMString_reserve(struct BifrostVM* vm, BifrostString* self, size_t new_capacity);
-void bfVMString_sprintf(struct BifrostVM* vm, BifrostString* self, const char* format, ...);
-
 size_t       BifrostString_length(const BifrostObjStr* self);
 string_range BifrostString_AsStrRng2(const BifrostString self);
 
@@ -288,14 +285,14 @@ typedef union StrFmtData
 
 typedef struct StrFmt
 {
-  uint64_t   flags;
   StrFmtData data;
+  uint64_t   flags;
 
 } StrFmt;
 
 inline StrFmt StrFmt_Make(const StrFmtType type, const uint64_t flags, const StrFmtData data)
 {
-  return (StrFmt){.flags = FmtOpt_Type(type) | flags, .data = data};
+  return (StrFmt){.data = data, .flags = FmtOpt_Type(type) | flags};
 }
 
 inline StrFmt fmt_Str(const string_range str) { return StrFmt_Make(StrFmtType_Str, FmtOpt_Precision(str.str_len), (StrFmtData){.str = str.str_bgn}); }
@@ -317,7 +314,7 @@ void String_FmtImpl(BifrostVM* const vm, BifrostObjStr* const str, const char* c
   do {                                                                                                               \
     const StrFmt fmt_args[] =                                                                                        \
      {                                                                                                               \
-      {0, {.ch = '0'}}, /* Extra element to allow for empty args. */                                                 \
+      {{.ch = '0'}, 0}, /* Extra element to allow for empty args. */                                                 \
       __VA_ARGS__,                                                                                                   \
     };                                                                                                               \
                                                                                                                      \
