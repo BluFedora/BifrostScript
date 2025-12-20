@@ -576,37 +576,6 @@ BF_VM_API BifrostVMError bfVM_stackStoreVariable(BifrostVM*  self,
 
 /*!
  * @brief
- *   Creates a native function object and assigns it to \p module_index \p field = \p value_idx.
- *   This function is a wrapper around 'bfVM_stackStoreClosure' but with no statics or userdata.
- *
- *   TODO: Return error for memory alloc failure.
- *
- * @param self
- *   The vm that will be operated on.
- *
- * @param module_index
- *   The instance, class, or module to set the field of.
- *
- * @param field
- *   A nul terminated string specifying the name of the field to set in \p module_index.
- *
- * @param func
- *   The function to be binded.
- *
- * @param arity
- *   The number of arguments your function expects. Use -1 for variable number of arguments.
- *
- * @return BifrostVMError
- *   BIFROST_VM_ERROR_INVALID_OP_ON_TYPE - \p module_index was not a valid object to set a field on.
- */
-BF_VM_API BifrostVMError bfVM_stackStoreNativeFn(BifrostVM*  self,
-                                                 size_t      inst_or_class_or_module,
-                                                 const char* field,
-                                                 bfNativeFnT func,
-                                                 int32_t     arity);
-
-/*!
- * @brief
  *   Creates a native function object with more advanced parameters than 'bfVM_stackStoreNativeFn'.
  *
  *   TODO: Return error for memory alloc failure.
@@ -635,13 +604,15 @@ BF_VM_API BifrostVMError bfVM_stackStoreNativeFn(BifrostVM*  self,
  * @return BifrostVMError
  *   BIFROST_VM_ERROR_INVALID_OP_ON_TYPE - \p module_index was not a valid object to set a field on.
  */
-BF_VM_API BifrostVMError bfVM_stackStoreClosure(BifrostVM*  self,
+BF_VM_API BifrostVMError bfVM_stackMakeFunction(BifrostVM*  self,
                                                 size_t      inst_or_class_or_module,
                                                 const char* field,
                                                 bfNativeFnT func,
                                                 int32_t     arity,
                                                 uint32_t    num_statics,
                                                 uint16_t    extra_data);
+
+
 
 /*!
  * @brief

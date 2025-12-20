@@ -195,7 +195,7 @@ void bfVM_moduleLoadStd(BifrostVM* self, size_t idx, uint32_t module_flags)
   {
     if (bfVM_moduleMake(self, idx, "std:io") == BIFROST_VM_ERROR_NONE)
     {
-      bfVM_stackStoreNativeFn(self, idx, "print", &bfVM_moduleLoadStdIOPrint, -1);
+      bfVM_stackMakeFunction(self, idx, "print", &bfVM_moduleLoadStdIOPrint, -1, 0, 0);
     }
   }
 }
@@ -575,11 +575,6 @@ BifrostVMError bfVM_stackStoreVariable(BifrostVM* self, size_t inst_or_class_or_
   return BIFROST_VM_ERROR_NONE;
 }
 
-BifrostVMError bfVM_stackStoreNativeFn(BifrostVM* self, size_t inst_or_class_or_module, const char* field, bfNativeFnT func, int32_t arity)
-{
-  return bfVM_stackStoreClosure(self, inst_or_class_or_module, field, func, arity, 0, 0);
-}
-
 BifrostVMError bfVM_closureGetStatic(BifrostVM* self, size_t dst_idx, size_t static_idx)
 {
   bfVM_assertStackIndex(self, dst_idx);
@@ -597,7 +592,7 @@ BifrostVMError bfVM_closureGetStatic(BifrostVM* self, size_t dst_idx, size_t sta
   return BIFROST_VM_ERROR_NONE;
 }
 
-BifrostVMError bfVM_stackStoreClosure(BifrostVM* self, size_t inst_or_class_or_module, const char* field, bfNativeFnT func, int32_t arity, uint32_t num_statics, uint16_t extra_data)
+BifrostVMError bfVM_stackMakeFunction(BifrostVM* self, size_t inst_or_class_or_module, const char* field, bfNativeFnT func, int32_t arity, uint32_t num_statics, uint16_t extra_data)
 {
   bfVM_assertStackIndex(self, inst_or_class_or_module);
 

@@ -441,7 +441,7 @@ namespace bf
 
     BifrostVMError stackStoreClosure(size_t inst_or_class_or_module, const char* field, bfNativeFnT func, int32_t arity, uint32_t num_statics = 0u, uint16_t extra_data = 0u)
     {
-      return bfVM_stackStoreClosure(self(), inst_or_class_or_module, field, func, arity, num_statics, extra_data);
+      return bfVM_stackMakeFunction(self(), inst_or_class_or_module, field, func, arity, num_statics, extra_data);
     }
 
     BifrostVMError closureGetStatic(size_t dst_idx, size_t static_idx)
