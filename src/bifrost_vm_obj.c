@@ -555,9 +555,9 @@ StringCmp StringCmp_Make(const char* const str, const size_t length)
   return (StringCmp){.str = str, .length = (uint32_t)length, .hash = BifrostString_Hash(str, length)};
 }
 
-StringCmp StringCmp_FromBStr(const BifrostObjStr* self)
+StringCmp StringCmp_FromStr(const BifrostObjStr* self)
 {
-  return (StringCmp){.str = self->str, .length = (uint32_t)String_length(self), .hash = self->hash};
+  return (StringCmp){.str = self->str, .length = self->length, .hash = self->hash};
 }
 StringCmp StringCmp_FromStrView(const string_range self) { return StringCmp_Make(self.str_bgn, self.str_len); }
 

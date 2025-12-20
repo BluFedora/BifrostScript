@@ -219,7 +219,7 @@ static int bfVM_moduleUnloadCmp(const void* lhs, const BifrostObjStr* rhs)
 {
   const StringCmp* const str_lhs = (const StringCmp*)lhs;
 
-  return StringCmp_Cmp(*str_lhs, StringCmp_FromBStr(rhs));
+  return StringCmp_Cmp(*str_lhs, StringCmp_FromStr(rhs));
 }
 
 void bfVM_moduleUnload(BifrostVM* self, const char* module, const size_t module_name_len)
@@ -277,7 +277,7 @@ BifrostValue bfVM_stackFindVariable(BifrostObjModule* module_obj, const char* va
       continue;
     }
 
-    if (StringCmp_Cmp(StringCmp_FromBStr(var->name), variable_cmp))
+    if (StringCmp_Cmp(StringCmp_FromStr(var->name), variable_cmp))
     {
       return var->value;
     }
@@ -1634,7 +1634,7 @@ BifrostObjModule* bfVM_findModule(BifrostVM* self, const char* name, size_t name
   {
     const BifrostObjStr* key = it.key;
 
-    if (StringCmp_Cmp(str_cmp, StringCmp_FromBStr(key)))
+    if (StringCmp_Cmp(str_cmp, StringCmp_FromStr(key)))
     {
       return bfVMValue_asPointer(it.value);
     }
@@ -1651,7 +1651,7 @@ uint32_t bfVM_getSymbol(BifrostVM* self, string_range name)
   {
     const BifrostObjStr* const symbol = self->symbols[symbol_index];
 
-    if (StringCmp_Cmp(StringCmp_FromBStr(symbol), StringCmp_FromStrView(name)))
+    if (StringCmp_Cmp(StringCmp_FromStr(symbol), StringCmp_FromStrView(name)))
     {
       return symbol_index;
     }

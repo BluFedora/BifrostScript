@@ -5,10 +5,7 @@
  * @brief
  *   Handles the object's available to the vm runtime.
  *
- * @version 0.0.1
- * @date    2020-02-16
- *
- * @copyright Copyright (c) 2020
+ * @copyright Copyright (c) 2020-2025
  */
 /******************************************************************************/
 #ifndef BIFROST_VM_OBJ_H
@@ -107,7 +104,7 @@ typedef struct BifrostObjClass
 typedef struct BifrostObjInstance
 {
   INSTANCE_HEADER;
-  BifrostHashMap fields;                           // <ConstBifrostString (Non owning string, [BifrostVM::symbols] is the owner), BifrostValue>
+  BifrostHashMap fields;
   char           extra_data[bf_flex_array_member]; /* This is for native class data. */
 
 } BifrostObjInstance;
@@ -191,21 +188,16 @@ typedef struct StringCmp
 } StringCmp;
 
 StringCmp StringCmp_Make(const char* const str, const size_t length);
-StringCmp StringCmp_FromBStr(const BifrostObjStr* self);
+StringCmp StringCmp_FromStr(const BifrostObjStr* self);
 StringCmp StringCmp_FromStrView(const string_range self);
 bool      StringCmp_Cmp(const StringCmp lhs, const StringCmp rhs);
 
-inline size_t String_length(const BifrostObjStr* self)
-{
-  return self->length;
-}
-
-inline string_range String_AsStrRng(const BifrostObjStr* self)
-{
-  return MakeStringLen(self->str, String_length(self));
-}
+inline size_t       String_length(const BifrostObjStr* self) { return self->length; }
+inline string_range String_AsStrRng(const BifrostObjStr* self) { return MakeStringLen(self->str, String_length(self)); }
 
 /* hash-map */
+
+typedef int (*bfHashMapCmp)(const void* lhs, const BifrostObjStr* rhs);
 
 typedef struct bfHashMapIter
 {

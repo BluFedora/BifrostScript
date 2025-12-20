@@ -2,14 +2,7 @@
 /*!
  * @file   bifrost_vm.h
  * @author Shareef Raheem (http://blufedora.github.io)
- * @par
- *    Bifrost Scripting Language\n
- *    Dependencies:             \n
- *      > C99 or later.         \n
- *      > C Runtime Library     \n
- *
- * @brief
- *  The main API for the Bifrost Scripting Language.
+ * @brief  The public API for the Bifrost Scripting Language.
  *
  * @copyright Copyright (c) 2019-2025 Shareef Abdoul-Raheem
  */
@@ -250,9 +243,6 @@ typedef enum BifrostVMBuildInSymbol
 
 #define BIFROST_HASH_MAP_BUCKET_SIZE 128
 
-typedef unsigned (*bfHashMapHash)(const void* key);
-typedef int (*bfHashMapCmp)(const void* lhs, const BifrostObjStr* rhs);
-
 typedef struct bfHashNode bfHashNode;
 
 typedef struct BifrostHashMap
@@ -276,7 +266,7 @@ struct BifrostVM
   BifrostVMStackFrame* frames;                                  /*!< The call stack.                                                                */
   BifrostValue*        stack;                                   /*!< The base pointer to the stack memory.                                          */
   BifrostValue*        stack_top;                               /*!< The usable top of the [BifrostVM::stack].                                      */
-  BifrostObjStr**      symbols;                                 /*!< Every symbol ever used in the vm, a 'perfect hash'.                            */
+  BifrostObjStr**      symbols;                                 /*!< Every symbol ever used in the vm.                                              */
   BifrostObj*          gc_object_list;                          /*!< The list of every object allocated by this VM.                                 */
   BifrostHashMap       modules;                                 /*!< <BifrostObjStr, BifrostObjModule*> for fast module lookup                      */
   BifrostParser*       parser_stack;                            /*!< For handling the recursive nature of importing modules.                        */

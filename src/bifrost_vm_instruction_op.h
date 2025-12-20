@@ -2,17 +2,9 @@
 /*!
  * @file   bifrost_vm_instruction_op.h
  * @author Shareef Abdoul-Raheem (http://blufedora.github.io/)
- * @par
- *    Bifrost Scripting Language
+ * @brief  List of op codes for the virtual machine.
  *
- * @brief
- *    The list of op codes the virtual machine handles along with
- *    the spec on interpreting each code.
- *
- * @version 0.0.1-beta
- * @date    2019-07-01
- *
- * @copyright Copyright (c) 2019 Shareef Raheem
+ * @copyright Copyright (c) 2019-2025 Shareef Raheem
  */
 /******************************************************************************/
 #ifndef BIFROST_VM_INSTRUCTION_OP_H

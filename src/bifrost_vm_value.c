@@ -151,7 +151,7 @@ bool bfVMValue_ee(const BifrostValue lhs, const BifrostValue rhs)
         BifrostObjStr* const lhs_string = (BifrostObjStr*)lhs_obj;
         BifrostObjStr* const rhs_string = (BifrostObjStr*)rhs_obj;
 
-        return StringCmp_Cmp(StringCmp_FromBStr(lhs_string), StringCmp_FromBStr(rhs_string));
+        return StringCmp_Cmp(StringCmp_FromStr(lhs_string), StringCmp_FromStr(rhs_string));
       }
     }
   }

@@ -35,7 +35,7 @@ static unsigned bfHashMap_defaultHash(const void* key)
 
 static int bfHashMap_defaultCmp(const BifrostObjStr* const lhs, const BifrostObjStr* const rhs)
 {
-  return StringCmp_Cmp(StringCmp_FromBStr(lhs), StringCmp_FromBStr(rhs));
+  return StringCmp_Cmp(StringCmp_FromStr(lhs), StringCmp_FromStr(rhs));
 }
 
 static bfHashNode* bfHashMap_getNode(const BifrostHashMap* self, const BifrostObjStr* key, unsigned hash)
