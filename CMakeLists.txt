@@ -46,7 +46,8 @@ target_sources(
     "include/bifrost/bifrost_vm.hpp"
     
     "src/bifrost_hash_map.c"
-    "src/bifrost_hash_map.c"
+    "src/bifrost_libc.c"
+    "src/bifrost_libc.h"
     "src/bifrost_vm_api.c"
     "src/bifrost_vm_debug.c"
     "src/bifrost_vm_debug.h"
@@ -63,8 +64,7 @@ target_sources(
     "src/bifrost_vm_parser.h"
     "src/bifrost_vm_value.c"
     "src/bifrost_vm_value.h"
-    "src/bifrost_libc.h" 
-    "src/bifrost_libc.c")
+)
 
 set_target_properties(
   BifrostScript

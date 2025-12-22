@@ -38,13 +38,13 @@ static int bfHashMap_defaultCmp(const BifrostObjStr* const lhs, const BifrostObj
   return StringCmp_Cmp(StringCmp_FromStr(lhs), StringCmp_FromStr(rhs));
 }
 
-static bfHashNode* bfHashMap_getNode(const BifrostHashMap* self, const BifrostObjStr* key, unsigned hash)
+static bfHashNode* bfHashMap_getNode(const BifrostHashMap* self, const StringCmp key, unsigned hash)
 {
   bfHashNode* cursor = self->buckets[hash];
 
   while (cursor)
   {
-    if (bfHashMap_defaultCmp(key, cursor->key))
+    if (StringCmp_Cmp(key, StringCmp_FromStr(cursor->key)))
     {
       break;
     }
@@ -63,7 +63,7 @@ static void bfHashMap_deleteNode(const BifrostHashMap* self, bfHashNode* node)
 void bfHashMap_ctor(BifrostHashMap* self, struct BifrostVM* vm)
 {
   self->vm          = vm;
-  self->num_buckets = BIFROST_HASH_MAP_BUCKET_SIZE;
+  self->num_buckets = bfCArraySize(self->buckets);
 
   for (unsigned i = 0; i < self->num_buckets; ++i)
   {
@@ -74,7 +74,7 @@ void bfHashMap_ctor(BifrostHashMap* self, struct BifrostVM* vm)
 void bfHashMap_set(BifrostHashMap* self, const BifrostObjStr* key, const BifrostValue value)
 {
   const unsigned hash = bfHashMap_defaultHash(key) % self->num_buckets;
-  bfHashNode*    node = bfHashMap_getNode(self, key, hash);
+  bfHashNode*    node = bfHashMap_getNode(self, StringCmp_FromStr(key), hash);
 
   if (!node)
   {
@@ -87,29 +87,33 @@ void bfHashMap_set(BifrostHashMap* self, const BifrostObjStr* key, const Bifrost
   node->value = value;
 }
 
+#if 0
 static int bfHashMap_has(const BifrostHashMap* self, const void* key)
 {
   const unsigned hash = bfHashMap_defaultHash(key) % self->num_buckets;
   return bfHashMap_getNode(self, key, hash) != NULL;
 }
+#endif
 
-BifrostValue bfHashMap_get(BifrostHashMap* self, const BifrostObjStr* key)
+BifrostValue bfHashMap_get(BifrostHashMap* self, const StringCmp key)
 {
-  const unsigned hash = bfHashMap_defaultHash(key) % self->num_buckets;
+  const uint32_t hash = key.hash % self->num_buckets;
   bfHashNode*    node = bfHashMap_getNode(self, key, hash);
 
   return node ? node->value : bfVMValue_fromNull();
 }
 
-int bfHashMap_removeCmp(BifrostHashMap* self, const void* key, bfHashMapCmp cmp)
+int bfHashMap_remove(BifrostHashMap* self, const StringCmp key)
 {
-  const unsigned hash   = bfHashMap_defaultHash(key) % self->num_buckets;
+  const unsigned hash   = key.hash % self->num_buckets;
   bfHashNode*    cursor = self->buckets[hash];
   bfHashNode*    prev   = NULL;
 
   while (cursor)
   {
-    if (cmp(key, cursor->key))
+    const StringCmp cursor_str = StringCmp_FromStr(cursor->key);
+
+    if (StringCmp_Cmp(key, cursor_str))
     {
       if (prev)
       {

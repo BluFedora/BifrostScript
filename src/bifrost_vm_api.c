@@ -1,15 +1,8 @@
 /******************************************************************************/
 /*!
- * @file   bifrost_vm.c
+ * @file   bifrost_vm_api.c
  * @author Shareef Raheem (http://blufedora.github.io)
- * @par
- *    Bifrost Scripting Language\n
- *    Dependencies:             \n
- *      > C99 or later.         \n
- *      > C Runtime Library     \n
- *
- * @brief
- *  The main API for the Bifrost Scripting Language.
+ * @brief  The public API for the Bifrost Scripting Language.
  *
  * @copyright Copyright (c) 2019-2025 Shareef Abdoul-Raheem
  */
@@ -22,7 +15,21 @@
 #include "bifrost_vm_obj.h"
 #include "bifrost_vm_parser.h"
 
-BifrostObjModule*     bfVM_findModule(BifrostVM* self, const char* name, size_t name_len);
+static BifrostObjModule* bfVM_findModule(BifrostVM* self, const char* name, size_t name_len)
+{
+  const StringCmp    str_cmp      = StringCmp_Make(name, name_len);
+  const BifrostValue module_value = bfHashMap_get(&self->modules, str_cmp);
+
+  if (!bfVMValue_isNull(module_value))
+  {
+    return bfVMValue_asPointer(module_value);
+  }
+  else
+  {
+    return NULL;
+  }
+}
+
 uint32_t              bfVM_getSymbol(BifrostVM* self, string_range name);
 static BifrostVMError bfVM_runModule(BifrostVM* self, BifrostObjModule* module);
 static BifrostVMError bfVM_compileIntoModule(BifrostVM* self, BifrostObjModule* module, const char* source, size_t source_len);
@@ -44,7 +51,7 @@ bfValueHandle bfVM_getHandleNext(bfValueHandle h)
   return h->next;
 }
 
-BifrostMethodBind bfMethodBind_make(const char* name, bfNativeFnT func, int32_t arity, uint32_t num_statics, uint16_t extra_data)
+BifrostMethodBind bfMethodBind_make(const char* name, BifrostNativeFn func, int32_t arity, uint32_t num_statics, uint16_t extra_data)
 {
   BifrostMethodBind self;
 
@@ -195,7 +202,11 @@ void bfVM_moduleLoadStd(BifrostVM* self, size_t idx, uint32_t module_flags)
   {
     if (bfVM_moduleMake(self, idx, "std:io") == BIFROST_VM_ERROR_NONE)
     {
-      bfVM_stackMakeFunction(self, idx, "print", &bfVM_moduleLoadStdIOPrint, -1, 0, 0);
+      const size_t print_fn_idx = idx + 1;
+
+      bfVM_stackResize(self, print_fn_idx + 1);
+      bfVM_stackSetFunction(self, print_fn_idx, &bfVM_moduleLoadStdIOPrint, -1, 0, 0);
+      bfVM_stackStoreVariable(self, idx, "print", print_fn_idx);
     }
   }
 }
@@ -215,13 +226,6 @@ BifrostVMError bfVM_moduleLoad(BifrostVM* self, size_t idx, const char* module, 
   return BIFROST_VM_ERROR_MODULE_NOT_FOUND;
 }
 
-static int bfVM_moduleUnloadCmp(const void* lhs, const BifrostObjStr* rhs)
-{
-  const StringCmp* const str_lhs = (const StringCmp*)lhs;
-
-  return StringCmp_Cmp(*str_lhs, StringCmp_FromStr(rhs));
-}
-
 void bfVM_moduleUnload(BifrostVM* self, const char* module, const size_t module_name_len)
 {
   /*
@@ -232,7 +236,7 @@ void bfVM_moduleUnload(BifrostVM* self, const char* module, const size_t module_
 
   const StringCmp str_cmp = StringCmp_Make(module, module_name_len);
 
-  bfHashMap_removeCmp(&self->modules, &str_cmp, &bfVM_moduleUnloadCmp);
+  bfHashMap_remove(&self->modules, str_cmp);
 }
 
 void bfVM_moduleUnloadAll(BifrostVM* self)
@@ -247,14 +251,22 @@ size_t bfVM_stackSize(const BifrostVM* self)
 
 BifrostVMError bfVM_stackResize(BifrostVM* self, size_t size)
 {
-  const size_t stack_size     = bfVMArray_size(&self->stack);
+  const size_t old_stack_size = bfVMArray_size(&self->stack);
   const size_t stack_used     = self->stack_top - self->stack;
-  const size_t requested_size = stack_used + size;
+  const size_t new_stack_size = stack_used + size;
 
-  if (stack_size < requested_size)
+  if (old_stack_size < new_stack_size)
   {
-    bfVMArray_resize(self, &self->stack, requested_size);
+    bfVMArray_resize(self, &self->stack, new_stack_size);
     self->stack_top = self->stack + stack_used;  // Reload stack top pointer
+
+    // Nil out the stack so the gc won't read garbage.
+    {
+      for (size_t stack_idx = old_stack_size; stack_idx < new_stack_size; ++stack_idx)
+      {
+        self->stack[stack_idx] = bfVMValue_fromNull();
+      }
+    }
   }
 
   return BIFROST_VM_ERROR_NONE;
@@ -480,7 +492,7 @@ void bfVM_stackLoadVariable(BifrostVM* self, size_t dst_idx, size_t inst_or_clas
   {
     BifrostObjInstance* const inst = (BifrostObjInstance*)obj;
 
-    const BifrostValue value = bfHashMap_get(&inst->fields, self->symbols[symbol]);
+    const BifrostValue value = bfHashMap_get(&inst->fields, StringCmp_FromStr(self->symbols[symbol]));
 
     if (!bfVMValue_isNull(value))
     {
@@ -592,21 +604,6 @@ BifrostVMError bfVM_closureGetStatic(BifrostVM* self, size_t dst_idx, size_t sta
   return BIFROST_VM_ERROR_NONE;
 }
 
-BifrostVMError bfVM_stackMakeFunction(BifrostVM* self, size_t inst_or_class_or_module, const char* field, bfNativeFnT func, int32_t arity, uint32_t num_statics, uint16_t extra_data)
-{
-  bfVM_assertStackIndex(self, inst_or_class_or_module);
-
-  const BifrostValue obj      = self->stack_top[inst_or_class_or_module];
-  const string_range var_name = MakeString(field);
-
-  if (bfVM__stackStoreVariable(self, obj, var_name, bfVMValue_fromPointer(bfObj_NewNativeFn(self, func, arity, num_statics, extra_data))))
-  {
-    return BIFROST_VM_ERROR_INVALID_OP_ON_TYPE;
-  }
-
-  return BIFROST_VM_ERROR_NONE;
-}
-
 BifrostVMError bfVM_closureSetStatic(BifrostVM* self, size_t closure_idx, size_t static_idx, size_t value_idx)
 {
   bfVM_assertStackIndex(self, closure_idx);
@@ -680,28 +677,50 @@ BifrostVMError bfVM_stackStoreClass(BifrostVM* self, size_t inst_or_class_or_mod
   return BIFROST_VM_ERROR_NONE;
 }
 
-void bfVM_stackSetString(BifrostVM* self, size_t idx, const char* value, size_t len)
+BF_VM_API BifrostVMError bfVM_stackSetFunction(BifrostVM* const      self,
+                                               const size_t          dst_idx,
+                                               const BifrostNativeFn func,
+                                               const int32_t         arity,
+                                               const uint32_t        num_statics,
+                                               const uint16_t        extra_data_size)
 {
-  bfVM_assertStackIndex(self, idx);
-  self->stack_top[idx] = bfVMValue_fromPointer(bfObj_NewString(self, (string_range){.str_bgn = value, .str_len = len}));
+  bfVM_assertStackIndex(self, dst_idx);
+
+  BifrostObjNativeFn* const native_func = bfObj_NewNativeFn(self, func, arity, num_statics, extra_data_size);
+
+  self->stack_top[dst_idx] = bfVMValue_fromPointer(native_func);
+
+  return native_func != NULL ? BIFROST_VM_ERROR_NONE : BIFROST_VM_ERROR_OUT_OF_MEMORY;
 }
 
-void bfVM_stackSetNumber(BifrostVM* self, size_t idx, double value)
+void bfVM_stackSetString(BifrostVM* const self, const size_t dst_idx, const char* const value, const size_t len)
 {
-  bfVM_assertStackIndex(self, idx);
-  self->stack_top[idx] = bfVMValue_fromNumber(value);
+  bfVM_assertStackIndex(self, dst_idx);
+
+  BifrostObjStr* const str = bfObj_NewString(self, MakeStringLen(value, len));
+
+  self->stack_top[dst_idx] = bfVMValue_fromPointer(str);
 }
 
-void bfVM_stackSetBool(BifrostVM* self, size_t idx, bool value)
+void bfVM_stackSetNumber(BifrostVM* const self, const size_t dst_idx, double value)
 {
-  bfVM_assertStackIndex(self, idx);
-  self->stack_top[idx] = bfVMValue_fromBool(value);
+  bfVM_assertStackIndex(self, dst_idx);
+
+  self->stack_top[dst_idx] = bfVMValue_fromNumber(value);
 }
 
-void bfVM_stackSetNil(BifrostVM* self, size_t idx)
+void bfVM_stackSetBool(BifrostVM* const self, const size_t dst_idx, const bool value)
 {
-  bfVM_assertStackIndex(self, idx);
-  self->stack_top[idx] = bfVMValue_fromNull();
+  bfVM_assertStackIndex(self, dst_idx);
+
+  self->stack_top[dst_idx] = bfVMValue_fromBool(value);
+}
+
+void bfVM_stackSetNil(BifrostVM* const self, const size_t dst_idx)
+{
+  bfVM_assertStackIndex(self, dst_idx);
+
+  self->stack_top[dst_idx] = bfVMValue_fromNull();
 }
 
 void* bfVM_stackReadInstance(const BifrostVM* self, size_t idx)
@@ -992,18 +1011,17 @@ static BifrostVMStackFrame* bfVM_pushCallFrame(BifrostVM* self, BifrostObjFn* fn
   return new_frame;
 }
 
-static void bfVM_popAllCallFrames(BifrostVM* self, const BifrostVMStackFrame* ref_frame)
+static void bfVM_popAllCallFrames(BifrostVM* const self, const size_t ref_frame_idx)
 {
-  const size_t    num_frames   = ref_frame - self->frames;
-  const size_t    total_frames = bfVMArray_size(&self->frames);
-  const bfErrorFn error_fn     = self->params.error_fn;
+  const size_t    top_frame = bfVMArray_size(&self->frames);
+  const bfErrorFn error_fn  = self->params.error_fn;
 
   if (error_fn)
   {
     error_fn(self, BIFROST_VM_ERROR_STACK_TRACE_BEGIN, -1, "");
     error_fn(self, BIFROST_VM_ERROR_STACK_TRACE, -1, self->last_error->str);
 
-    for (size_t i = num_frames; i < total_frames; ++i)
+    for (size_t i = ref_frame_idx; i < top_frame; ++i)
     {
       const BifrostVMStackFrame* frame    = &self->frames[i];
       const BifrostObjFn* const  fn       = frame->fn;
@@ -1018,8 +1036,8 @@ static void bfVM_popAllCallFrames(BifrostVM* self, const BifrostVMStackFrame* re
     error_fn(self, BIFROST_VM_ERROR_STACK_TRACE_END, -1, "");
   }
 
-  self->stack_top = self->stack + ref_frame->old_stack;
-  bfVMArray_resize(self, &self->frames, num_frames);
+  self->stack_top = self->stack + self->frames[ref_frame_idx].old_stack;
+  bfVMArray_resize(self, &self->frames, ref_frame_idx);
 }
 
 static void bfVM_popCallFrame(BifrostVM* self, BifrostVMStackFrame* frame)
@@ -1032,8 +1050,8 @@ static BifrostVMError bfVM_execTopFrame(BifrostVM* self, BifrostObjFn* fn_to_run
 {
   bfVM_pushCallFrame(self, fn_to_run, new_start);
 
-  const BifrostVMStackFrame* const reference_frame = bfVMArray_back(&self->frames);
-  BifrostVMError                   err             = BIFROST_VM_ERROR_NONE;
+  const size_t   reference_frame_idx = bfVMArray_size(&self->frames) - 1;
+  BifrostVMError err                 = BIFROST_VM_ERROR_NONE;
 
 #define BF_RUNTIME_ERROR(fmt, ...)                        \
   String_Fmt(self, self->last_error, (fmt), __VA_ARGS__); \
@@ -1049,7 +1067,8 @@ static BifrostVMError bfVM_execTopFrame(BifrostVM* self, BifrostObjFn* fn_to_run
   locals = self->stack + frame->stack
 
 frame_start:;
-  BifrostVMStackFrame* frame          = bfVMArray_back(&self->frames);
+  const size_t         frame_idx      = bfVMArray_size(&self->frames) - 1;
+  BifrostVMStackFrame* frame          = self->frames + frame_idx;
   BifrostObjModule*    current_module = frame->fn->module;
   BifrostValue*        constants      = frame->fn->constants;
   BifrostValue*        locals         = self->stack + frame->stack;
@@ -1066,7 +1085,7 @@ frame_start:;
       case BIFROST_VM_OP_RETURN:
       {
         locals[0] = locals[regs[REG_RBx]];
-        goto halt;
+        goto pop_frame;
       }
       case BIFROST_VM_OP_LOAD_SYMBOL:
       {
@@ -1087,7 +1106,7 @@ frame_start:;
         {
           BifrostObjInstance* inst = (BifrostObjInstance*)obj;
 
-          const BifrostValue value = bfHashMap_get(&inst->fields, self->symbols[symbol]);
+          const BifrostValue value = bfHashMap_get(&inst->fields, StringCmp_FromStr(self->symbols[symbol]));
 
           if (!bfVMValue_isNull(value))
           {
@@ -1455,19 +1474,17 @@ frame_start:;
 #undef BF_REFRESH_LOCALS
 
 runtime_error:
-  bfVM_popAllCallFrames(self, reference_frame);
-  err = BIFROST_VM_ERROR_RUNTIME;
-  goto done;
+  bfVM_popAllCallFrames(self, reference_frame_idx);
+  return BIFROST_VM_ERROR_RUNTIME;
 
-halt:
+pop_frame:
   bfVM_popCallFrame(self, frame);
 
-  if (reference_frame < frame)
+  if (reference_frame_idx < frame_idx)
   {
     goto frame_start;
   }
 
-done:
   return err;
 }
 
@@ -1550,103 +1567,16 @@ void bfVM_gc(BifrostVM* self)
   bfGC_Collect(self);
 }
 
-const char* bfVM_buildInSymbolStr(const BifrostVM* self, BifrostVMBuildInSymbol symbol)
-{
-  (void)self;
-  static const char* const k_EnumToString[] =
-   {
-    "ctor",
-    "dtor",
-    "call",
-    "__error__",
-   };
-
-  return k_EnumToString[symbol];
-}
-
-const char* bfVM_errorString(const BifrostVM* self)
-{
-  return self->last_error->str;
-}
-
-void bfVM_dtor(BifrostVM* self)
-{
-  BifrostObj* garbage_list = self->gc_object_list;
-
-  while (garbage_list)
-  {
-    void* const next = garbage_list->next;
-    bfObj_Finalize(self, garbage_list);
-    garbage_list = next;
-  }
-
-  while (self->gc_object_list)
-  {
-    void* const next = self->gc_object_list->next;
-    bfObj_Delete(self, self->gc_object_list);
-    self->gc_object_list = next;
-  }
-
-  while (self->finalized)
-  {
-    void* const next = self->finalized->next;
-    bfObj_Delete(self, self->finalized);
-    self->finalized = next;
-  }
-
-  const size_t num_symbols = bfVMArray_size(&self->symbols);
-
-  for (size_t i = 0; i < num_symbols; ++i)
-  {
-    bfObj_Delete(self, &self->symbols[i]->super);
-  }
-
-  bfVMArray_delete(self, &self->symbols);
-  bfVMArray_delete(self, &self->frames);
-  bfVMArray_delete(self, &self->stack);
-  bfHashMap_dtor(&self->modules);
-  bfObj_Delete(self, &self->last_error->super);
-
-  while (self->free_handles)
-  {
-    const bfValueHandle next = self->free_handles->next;  // NOLINT(misc-misplaced-const)
-    bfGC_AllocMemory(self, self->free_handles, sizeof(struct bfValueHandleImpl), 0u);
-    self->free_handles = next;
-  }
-
-  if (self->handles)
-  {
-    LibC_assert(false, "You are leaking a handle to a VM Object.");
-  }
-}
-
-BifrostObjModule* bfVM_findModule(BifrostVM* self, const char* name, size_t name_len)
-{
-  const StringCmp str_cmp = StringCmp_Make(name, name_len);
-  BifrostHashMap* modules = &self->modules;
-
-  bfHashMapFor(it, modules)
-  {
-    const BifrostObjStr* key = it.key;
-
-    if (StringCmp_Cmp(str_cmp, StringCmp_FromStr(key)))
-    {
-      return bfVMValue_asPointer(it.value);
-    }
-  }
-
-  return NULL;
-}
-
 uint32_t bfVM_getSymbol(BifrostVM* self, string_range name)
 {
-  const uint32_t num_symbols = (uint32_t)bfVMArray_size(&self->symbols);
+  const StringCmp name_cmp    = StringCmp_FromStrView(name);
+  const uint32_t  num_symbols = (uint32_t)bfVMArray_size(&self->symbols);
 
   for (uint32_t symbol_index = 0; symbol_index < num_symbols; ++symbol_index)
   {
     const BifrostObjStr* const symbol = self->symbols[symbol_index];
 
-    if (StringCmp_Cmp(StringCmp_FromStr(symbol), StringCmp_FromStrView(name)))
+    if (StringCmp_Cmp(StringCmp_FromStr(symbol), name_cmp))
     {
       return symbol_index;
     }
@@ -1741,4 +1671,71 @@ BifrostObjModule* bfVM_importModule(BifrostVM* self, const char* from, const cha
   }
 
   return m;
+}
+
+const char* bfVM_buildInSymbolStr(const BifrostVM* self, BifrostVMBuildInSymbol symbol)
+{
+  (void)self;
+  static const char* const k_EnumToString[] =
+   {
+    "ctor",
+    "dtor",
+    "call",
+    "__error__",
+   };
+
+  return k_EnumToString[symbol];
+}
+
+const char* bfVM_errorString(const BifrostVM* self)
+{
+  return self->last_error->str;
+}
+
+void bfVM_dtor(BifrostVM* const self)
+{
+  BifrostObj* garbage_list = self->gc_object_list;
+
+  while (garbage_list)
+  {
+    void* const next = garbage_list->next;
+    bfObj_Finalize(self, garbage_list);
+    garbage_list = next;
+  }
+
+  while (self->gc_object_list)
+  {
+    void* const next = self->gc_object_list->next;
+    bfObj_Delete(self, self->gc_object_list);
+    self->gc_object_list = next;
+  }
+
+  while (self->finalized)
+  {
+    void* const next = self->finalized->next;
+    bfObj_Delete(self, self->finalized);
+    self->finalized = next;
+  }
+
+  const size_t num_symbols = bfVMArray_size(&self->symbols);
+
+  for (size_t i = 0; i < num_symbols; ++i)
+  {
+    bfObj_Delete(self, &self->symbols[i]->super);
+  }
+
+  bfVMArray_delete(self, &self->symbols);
+  bfVMArray_delete(self, &self->frames);
+  bfVMArray_delete(self, &self->stack);
+  bfHashMap_dtor(&self->modules);
+  bfObj_Delete(self, &self->last_error->super);
+
+  while (self->free_handles)
+  {
+    const bfValueHandle next = self->free_handles->next;
+    bfGC_AllocMemory(self, self->free_handles, sizeof(struct bfValueHandleImpl), 0u);
+    self->free_handles = next;
+  }
+
+  LibC_assert(self->handles == NULL, "You are leaking a handle to a VM Object.");
 }

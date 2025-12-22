@@ -11,7 +11,7 @@
 #ifndef BIFROST_VM_OBJ_H
 #define BIFROST_VM_OBJ_H
 
-#include "bifrost/bifrost_vm.h" /* bfNativeFnT, bfClassFinalizer, BifrostValue, BifrostHashMap */
+#include "bifrost/bifrost_vm.h" /* BifrostNativeFn, bfClassFinalizer, BifrostValue, BifrostHashMap */
 
 #include "bifrost_vm_instruction_op.h"  // bfInstruction
 #include "bifrost_vm_lexer.h"           // string_range
@@ -111,13 +111,13 @@ typedef struct BifrostObjInstance
 
 typedef struct BifrostObjNativeFn
 {
-  BifrostObj    super;
-  bfNativeFnT   value;
-  int32_t       arity;
-  uint32_t      num_statics;
-  BifrostValue* statics;
-  uint16_t      extra_data_size;
-  char          extra_data[bf_flex_array_member]; /* This is for native data. */
+  BifrostObj      super;
+  BifrostNativeFn value;
+  int32_t         arity;
+  uint32_t        num_statics;
+  BifrostValue*   statics;
+  uint16_t        extra_data_size;
+  char            extra_data[bf_flex_array_member]; /* This is for native data. */
 
 } BifrostObjNativeFn;
 
@@ -153,7 +153,7 @@ BifrostObjModule*    bfObj_NewModule(struct BifrostVM* self, string_range name);
 BifrostObjClass*     bfObj_NewClass(struct BifrostVM* self, BifrostObjModule* module, string_range name, BifrostObjClass* base_clz, size_t extra_data);
 BifrostObjInstance*  bfObj_NewInstance(struct BifrostVM* self, BifrostObjClass* clz);
 BifrostObjFn*        bfObj_NewFunction(struct BifrostVM* self, BifrostObjModule* module);
-BifrostObjNativeFn*  bfObj_NewNativeFn(struct BifrostVM* self, bfNativeFnT fn_ptr, int32_t arity, uint32_t num_statics, uint16_t extra_data);
+BifrostObjNativeFn*  bfObj_NewNativeFn(struct BifrostVM* self, BifrostNativeFn fn_ptr, int32_t arity, uint32_t num_statics, uint16_t extra_data);
 BifrostObjStr*       bfObj_NewString(struct BifrostVM* self, string_range value);
 BifrostObjReference* bfObj_NewReference(struct BifrostVM* self, size_t extra_data_size);
 BifrostObjWeakRef*   bfObj_NewWeaKRef(struct BifrostVM* self, void* data);
@@ -197,8 +197,6 @@ inline string_range String_AsStrRng(const BifrostObjStr* self) { return MakeStri
 
 /* hash-map */
 
-typedef int (*bfHashMapCmp)(const void* lhs, const BifrostObjStr* rhs);
-
 typedef struct bfHashMapIter
 {
   const BifrostObjStr* key;
@@ -210,15 +208,15 @@ typedef struct bfHashMapIter
 
 void          bfHashMap_ctor(BifrostHashMap* self, struct BifrostVM* vm);
 void          bfHashMap_set(BifrostHashMap* self, const BifrostObjStr* key, const BifrostValue value);
-BifrostValue  bfHashMap_get(BifrostHashMap* self, const BifrostObjStr* key);
-int           bfHashMap_removeCmp(BifrostHashMap* self, const void* key, bfHashMapCmp cmp);  // 'key' is the first param for 'cmp'
+BifrostValue  bfHashMap_get(BifrostHashMap* self, const StringCmp key);
+int           bfHashMap_remove(BifrostHashMap* self, const StringCmp key);
 bfHashMapIter bfHashMap_itBegin(const BifrostHashMap* self);
 int           bfHashMap_itIsValid(const bfHashMapIter* it);
 void          bfHashMap_itGetNext(const BifrostHashMap* self, bfHashMapIter* it);
 void          bfHashMap_clear(BifrostHashMap* self);
 void          bfHashMap_dtor(BifrostHashMap* self);
 
-#define bfHashMapFor(it, map)                     \
+#define HashMap_ForEach(it, map)                  \
   for (bfHashMapIter it = bfHashMap_itBegin(map); \
        bfHashMap_itIsValid(&(it));                \
        bfHashMap_itGetNext(map, &(it)))

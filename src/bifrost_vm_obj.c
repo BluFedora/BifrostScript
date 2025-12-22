@@ -208,7 +208,7 @@ BifrostObjFn* bfObj_NewFunction(struct BifrostVM* self, BifrostObjModule* module
   return fn;
 }
 
-BifrostObjNativeFn* bfObj_NewNativeFn(struct BifrostVM* self, bfNativeFnT fn_ptr, int32_t arity, uint32_t num_statics, uint16_t extra_data)
+BifrostObjNativeFn* bfObj_NewNativeFn(struct BifrostVM* self, BifrostNativeFn fn_ptr, int32_t arity, uint32_t num_statics, uint16_t extra_data)
 {
   BifrostObjNativeFn* const fn = AllocateVMObjectEx(BifrostObjNativeFn, self, BIFROST_VM_OBJ_NATIVE_FN, sizeof(BifrostValue) * num_statics + extra_data);
 

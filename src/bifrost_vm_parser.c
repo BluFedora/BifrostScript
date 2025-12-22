@@ -33,7 +33,6 @@
   self->has_error = true
 
 extern uint32_t          bfVM_getSymbol(BifrostVM* self, string_range name);
-extern BifrostObjModule* bfVM_findModule(BifrostVM* self, const char* name, size_t name_len);
 extern BifrostValue      bfVM_stackFindVariable(BifrostObjModule* module_obj, const char* variable, size_t variable_len);
 extern BifrostObjModule* bfVM_importModule(BifrostVM* self, const char* from, const char* name, size_t name_len);
 

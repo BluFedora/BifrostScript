@@ -90,7 +90,7 @@ static void bfGCMarkObjects(struct BifrostVM* self)
     }
   }
 
-  bfHashMapFor(it, &self->modules)
+  HashMap_ForEach(it, &self->modules)
   {
     BifrostObjStr* const key   = (BifrostObjStr*)it.key;
     const BifrostValue   value = it.value;
@@ -423,7 +423,7 @@ static void bfGCMarkObj(BifrostObj* obj, uint8_t mark_value)
       {
         BifrostObjInstance* const inst = (BifrostObjInstance*)obj;
         bfGCMarkObj(&inst->clz->super, mark_value);
-        bfHashMapFor(it, &inst->fields)
+        HashMap_ForEach(it, &inst->fields)
         {
           bfGCMarkObj((BifrostObj*)&it.key->super, mark_value);
           bfGCMarkValue(it.value, mark_value);

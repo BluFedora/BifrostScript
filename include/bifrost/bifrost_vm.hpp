@@ -434,12 +434,12 @@ namespace bf
       bfVM_stackStoreVariable(self(), idx, variable_name, value_src_idx);
     }
 
-    void stackStore(size_t idx, const char* variable, bfNativeFnT func, int32_t arity) noexcept
+    void stackStore(size_t idx, const char* variable, BifrostNativeFn func, int32_t arity) noexcept
     {
       bfVM_stackStoreNativeFn(self(), idx, variable, func, arity);
     }
 
-    BifrostVMError stackStoreClosure(size_t inst_or_class_or_module, const char* field, bfNativeFnT func, int32_t arity, uint32_t num_statics = 0u, uint16_t extra_data = 0u)
+    BifrostVMError stackStoreClosure(size_t inst_or_class_or_module, const char* field, BifrostNativeFn func, int32_t arity, uint32_t num_statics = 0u, uint16_t extra_data = 0u)
     {
       return bfVM_stackMakeFunction(self(), inst_or_class_or_module, field, func, arity, num_statics, extra_data);
     }
