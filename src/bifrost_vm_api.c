@@ -244,11 +244,6 @@ void bfVM_moduleUnloadAll(BifrostVM* self)
   bfHashMap_clear(&self->modules);
 }
 
-size_t bfVM_stackSize(const BifrostVM* self)
-{
-  return bfVMArray_size(&self->stack) - (self->stack_top - self->stack);
-}
-
 BifrostVMError bfVM_stackResize(BifrostVM* self, size_t size)
 {
   const size_t old_stack_size = bfVMArray_size(&self->stack);

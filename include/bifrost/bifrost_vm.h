@@ -385,18 +385,6 @@ BF_VM_API void bfVM_moduleUnloadAll(BifrostVM* self);
 
 /*!
  * @brief
- *   Returns the number of slots you are allowed to access in the API stack.
- *
- * @param self
- *   The vm to operate on.
- *
- * @return size_t
- *   The number of slots you may access from the API.
- */
-BF_VM_API size_t bfVM_stackSize(const BifrostVM* self);
-
-/*!
- * @brief
  *   Resizes the API stack to \p size.
  *
  * @param self
